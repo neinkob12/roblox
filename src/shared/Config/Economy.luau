@@ -26,19 +26,25 @@ Economy.MergeCost = 3
 -- Tank: fills from pipes, stops when full
 Economy.Tank = {
 	MinCapacity = 50,
-	BaseSeconds = 60, -- capacity = max(MinCapacity, production/sec * seconds)
+	BaseSeconds = 60, -- capacity = max(MinCapacity, production/sec * seconds) * (1 + tankCapacity lvl * perLevel)
+	TickSeconds = 1, -- production tick
+	ReplicateSeconds = 0.5, -- tankMilk is sent to the client at most this often
 }
 
 -- Milk can (carried by the player, filled at the tank tap)
 Economy.Can = {
 	MinCapacity = 25,
-	BaseSeconds = 30,
+	BaseSeconds = 30, -- capacity = max(MinCapacity, production/sec * seconds) * (1 + canSize lvl * perLevel)
+	AutoCollectBaseSeconds = 10, -- autoCollect upgrade fills the can every (this - level) seconds
+	AutoCollectMinSeconds = 2,
 }
 
 -- Dairy: deposited milk is sold over time, cash waits on the collect pad
 Economy.Dairy = {
 	MinSellPerSecond = 5,
-	BaseSellFactor = 2, -- sells (production/sec * factor) milk per second
+	BaseSellFactor = 2, -- sells (production/sec * factor) milk per second, * (1 + sellSpeed lvl * perLevel)
+	TickSeconds = 0.5, -- how often the queue sells
+	AutoSellSeconds = 5, -- Auto Sell gamepass deposits the can this often
 }
 
 -- Milk price board: random multiplier, re-rolled every interval, same for whole server
@@ -53,6 +59,8 @@ Economy.Truck = {
 	EverySeconds = 300,
 	StaysSeconds = 45,
 	PriceBonus = 1.5, -- multiplies the current milk price while the truck is there
+	DriveSeconds = 4, -- drive in / drive out animation
+	DriveDistance = 80, -- studs the truck travels to reach TruckStop
 }
 
 -- Rare milk: chance per production tick that a cow's milk becomes rare
