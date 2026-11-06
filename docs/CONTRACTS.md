@@ -89,3 +89,31 @@ Pads use server-side `Touched` with a 1 second per-player debounce, and only the
 - `rojo build` succeeds, and StyLua and Selene pass (CI does this).
 - No `wait()` (use `task.wait`), no deprecated APIs, `--!strict` at the top of every file.
 - Your PR description lists: what you built, how to test it in Studio (steps), and any contract changes.
+
+## 8. Integration notes (added by lead after A1-A4 merged)
+
+These are binding for the B packages:
+
+- **`data.dairyQueue` holds milk VALUE** (`milk * price` locked at deposit), not raw milk. The UI should label it "Selling: $X" (multiply by `Multipliers.Cash` for an estimate). `stats.milkSold` counts raw milk.
+- **Missing cow keys mean 0.** Merging deletes tiers that hit 0 (`data.cows["1"] = nil`). Always use `data.cows[tostring(t)] or 0`.
+- **`CrateService:GiveCrate(player, premium)`:**
+  - `premium=false` adds 1 to `data.crates`
+  - `premium=true` opens the crate immediately with odds +1, fires `CrateOpened(tier, "premium")` and returns the tier
+
+  B3 calls it for the PremiumCrate product.
+- **`CrateOpened(tier, source)`:** `source` is `"crate"` or `"premium"`.
+- **World extras:**
+  - `workspace.Map.LobbySpawn` (neutral spawn before a plot is assigned)
+  - `workspace.MapReady = true` after the build
+  - `workspace.MilkTruck` (truck model while active)
+  - `workspace.DroppedCrates` (Parts named `MysteryCrate` with `OwnerUserId`)
+- **Stalls:** `StallN` is a Part with attribute `Tier`. `Count` BillboardGui > TextLabel `Text`. The cow model is parented as `StallN.Cow`. Cow models carry attributes `CowTier` and `CowId`.
+- **Reusable APIs:**
+  - `CowModels.Build(tier)` (PrimaryPart `Root` at the feet, front = -Z)
+  - `DiscoveryController:Show(tier)` (client reveal)
+  - `PlotService:GetPlot(player)`
+  - `DairyService:Deposit(player)`
+  - `CanService:FillCan(player)`
+  - `HerdUtil.GiveCow(player, tier, n)`
+- **Player attributes for UI:** `MilkPerSecond`, `TankCapacity`, `CanCapacity`, `SellPerSecond`, `PlotId`.
+- **Economy tuning keys added:** `AutoMergeSeconds`, `Tank.TickSeconds/ReplicateSeconds`, `Can.AutoCollect*`, `Dairy.TickSeconds/AutoSellSeconds`, `Truck.DriveSeconds/DriveDistance`, `Crate.DropCheckSeconds/MaxWorldCrates/PremiumOddsShift`.
