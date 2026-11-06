@@ -178,11 +178,8 @@ local function spawnCrate(player: Player): boolean
 
 	local crate = buildCrate()
 	local half = spawnPart.Size / 2
-	local offset = Vector3.new(
-		rng:NextNumber(-half.X, half.X) * 0.8,
-		half.Y + 1.5,
-		rng:NextNumber(-half.Z, half.Z) * 0.8
-	)
+	local offset =
+		Vector3.new(rng:NextNumber(-half.X, half.X) * 0.8, half.Y + 1.5, rng:NextNumber(-half.Z, half.Z) * 0.8)
 	crate.CFrame = CFrame.new(spawnPart.Position + offset)
 	crate:SetAttribute("OwnerUserId", player.UserId)
 	crate.Parent = crateFolder
