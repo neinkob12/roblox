@@ -22,6 +22,7 @@ Economy.BuyPriceGrowth = 1.035
 
 -- Merge: MergeCost cows of tier N -> 1 cow of tier N+1
 Economy.MergeCost = 3
+Economy.AutoMergeSeconds = 3 -- Auto Merge gamepass interval
 
 -- Tank: fills from pipes, stops when full
 Economy.Tank = {
@@ -84,6 +85,9 @@ Economy.FriendBoost = {
 -- Lucky crates ("Mystery Milk Crate")
 Economy.Crate = {
 	DropChancePerCowPerMinute = 0.002,
+	DropCheckSeconds = 60, -- drop roll interval (max 1 drop per player per roll)
+	MaxWorldCrates = 5, -- unclaimed dropped crates per plot; no new drops above this
+	PremiumOddsShift = 1, -- premium crates roll as if the best tier were this much higher
 	BuyBasePrice = 250,
 	BuyPriceSecondsOfProduction = 120, -- price = max(BuyBasePrice, production/sec * this)
 	-- Odds are relative to the player's highest tier owned (best):
