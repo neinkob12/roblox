@@ -44,7 +44,7 @@ local PIPE_D = 0.7
 local MAIN_X = -30.6 -- the main pipe runs along the left side of the plot
 
 local TANK_X = -22
-local TANK_Z = -4
+local TANK_Z = -13
 local TANK_SIZE = 10
 local TANK_H = 13
 local TANK_PLINTH = 0.6
@@ -398,12 +398,12 @@ function PlotBuilder.Build(id: number, cf: CFrame, accent: Color3, parent: Insta
 	-- faucet from the tank front toward the tap
 	local faucetY = FLOOR + 3.5
 	local tankFrontZ = TANK_Z - TANK_SIZE / 2
-	Builder.pipe(wp(TANK_X, faucetY, tankFrontZ), wp(TANK_X, faucetY, tankFrontZ - 2.2), 0.9, {
+	Builder.pipe(wp(TANK_X, faucetY, tankFrontZ), wp(TANK_X, faucetY, tankFrontZ - 3), 0.9, {
 		Name = "Faucet",
 		Color = C.metal,
 		Parent = decor,
 	})
-	Builder.pipe(wp(TANK_X, faucetY, tankFrontZ - 2.2), wp(TANK_X, faucetY - 1.4, tankFrontZ - 2.2), 0.9, {
+	Builder.pipe(wp(TANK_X, faucetY, tankFrontZ - 3), wp(TANK_X, faucetY - 1.4, tankFrontZ - 3), 0.9, {
 		Name = "FaucetSpout",
 		Color = C.metal,
 		Parent = decor,
@@ -411,7 +411,7 @@ function PlotBuilder.Build(id: number, cf: CFrame, accent: Color3, parent: Insta
 
 	-- Pads -------------------------------------------------------------------
 	local padY = FLOOR + 0.1
-	pad("TankTap", at(TANK_X, padY, -16), C.tap, "Fill Can", plot)
+	pad("TankTap", at(TANK_X, padY, -25), C.tap, "Fill Can", plot)
 	pad("BuyPad1", at(4, padY, -26), C.buy, "Buy x1", plot)
 	pad("BuyPad5", at(15, padY, -26), C.buy, "Buy x5", plot)
 	pad("BuyPad25", at(26, padY, -26), C.buy, "Buy x25", plot)
