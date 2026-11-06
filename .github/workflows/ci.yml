@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache tools
+        id: cache-tools
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin
+          key: tools-rojo7.7.1-stylua2.6.0-selene0.31.0
+
+      - name: Install tools
+        if: steps.cache-tools.outputs.cache-hit != 'true'
+        run: |
+          cargo install rojo --version 7.7.1 --locked
+          cargo install stylua --version 2.6.0 --locked --features luau
+          cargo install selene --version 0.31.0 --locked
+
+      - name: Format check (StyLua)
+        run: stylua --check src
+
+      - name: Lint (Selene)
+        run: selene src
+
+      - name: Build place (Rojo)
+        run: rojo build -o BrainrotCowFarm.rbxlx
+
+      - name: Upload place file
+        uses: actions/upload-artifact@v4
+        with:
+          name: BrainrotCowFarm-place
+          path: BrainrotCowFarm.rbxlx

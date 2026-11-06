@@ -1,0 +1,7 @@
+*.rbxl
+*.rbxlx
+*.rbxl.lock
+*.rbxlx.lock
+roblox.yml
+sourcemap.json
+build/
