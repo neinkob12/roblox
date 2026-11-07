@@ -14,7 +14,7 @@ local Quests = {}
 
 Quests.ActiveCount = 3
 Quests.TrackSeconds = 2 -- how often counters are diffed
-Quests.MinCash = 100 -- floor for cash rewards and cash-scaled targets
+Quests.MinCash = 150 -- floor for cash rewards and cash-scaled targets
 Quests.MinMilk = 50 -- floor for milk-scaled targets
 Quests.DebugEasyInStudio = false
 

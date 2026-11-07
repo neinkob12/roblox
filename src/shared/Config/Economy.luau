@@ -11,14 +11,16 @@
 
 local Economy = {}
 
-Economy.StartingCash = 10
+Economy.StartingCash = 25 -- enough for 2 cows after the first sale (tutorial "buy" step never blocks)
 Economy.StartingCows = { [1] = 1 } -- tier -> count for brand new players
+Economy.StartingTankMilk = 25 -- first can is full, so the first sale feels worth it
+Economy.StartingCrates = 1 -- new players can do an "open a crate" quest right away
 
 -- Buy pads (always buy tier 1 cows). Price of the n-th cow ever bought this rebirth:
 --   BuyBasePrice * BuyPriceGrowth ^ cowsBought
 Economy.BuyPads = { 1, 5, 25 }
 Economy.BuyBasePrice = 10
-Economy.BuyPriceGrowth = 1.035
+Economy.BuyPriceGrowth = 1.032 -- 1.035 left a ~4 min reveal gap between tier 3 and 5
 
 -- Merge: MergeCost cows of tier N -> 1 cow of tier N+1
 Economy.MergeCost = 3
@@ -42,15 +44,15 @@ Economy.Can = {
 
 -- Dairy: deposited milk is sold over time, cash waits on the collect pad
 Economy.Dairy = {
-	MinSellPerSecond = 5,
-	BaseSellFactor = 2, -- sells (production/sec * factor) milk per second, * (1 + sellSpeed lvl * perLevel)
+	MinSellPerSecond = 25,
+	BaseSellFactor = 8, -- a full can sells in ~2s (the walk to the cash pad), no "still selling" waits -- sells (production/sec * factor) milk per second, * (1 + sellSpeed lvl * perLevel)
 	TickSeconds = 0.5, -- how often the queue sells
 	AutoSellSeconds = 5, -- Auto Sell gamepass deposits the can this often
 }
 
 -- Milk price board: random multiplier, re-rolled every interval, same for whole server
 Economy.MilkPrice = {
-	Min = 0.5,
+	Min = 0.75, -- 0.5 made a new player's first sale look pointless
 	Max = 1.5,
 	IntervalSeconds = 30,
 }

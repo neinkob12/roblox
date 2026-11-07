@@ -83,7 +83,7 @@ Tutorial.Steps = {
 	},
 	{
 		id = "deposit",
-		text = "Bring the milk to the Dairy!",
+		text = "Bring the milk to the Dairy! (high Milk x = more cash)",
 		target = { scope = "dairy", name = "DepositPad" },
 		done = function(data, _ctx)
 			-- the queue can sell out fast, so already-sold cash also counts
@@ -104,7 +104,7 @@ Tutorial.Steps = {
 	},
 	{
 		id = "buy",
-		text = "Buy more cows!",
+		text = "Buy 2 more cows! (Need cash? Sell more milk!)",
 		target = { scope = "plot", name = "BuyPad1" },
 		done = function(data, _ctx)
 			return (data.cowsBought or 0) >= 2
@@ -120,8 +120,8 @@ Tutorial.Steps = {
 	},
 	{
 		id = "price",
-		text = "Sell when the milk price is high!",
-		target = { scope = "dairy", name = "PriceBoard" },
+		text = "Keep going: fill, sell, buy, merge! Open Quests for rewards",
+		target = { scope = "plot", name = "TankTap" },
 		autoSeconds = INFO_SECONDS,
 		done = function(_data, ctx)
 			return os.clock() - ctx.startedAt >= INFO_SECONDS
