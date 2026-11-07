@@ -96,6 +96,7 @@ local function tickPlayer(player: Player, dt: number)
 		local gained = newValue - current
 		Net.Event("Notify")
 			:FireClient(player, `{rare.name}! x{rare.multiplier} (+{Format.Number(gained)} milk)`, "rare")
+		Net.Event("Fx"):FireClient(player, "rare", { kind = rare.id })
 	end
 end
 

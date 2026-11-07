@@ -114,6 +114,7 @@ local function onDepositTouched(hit: BasePart)
 	if milk > 0 then
 		Net.Event("Notify")
 			:FireClient(player, `Sold {Format.Number(milk)} milk at {string.format("%.2f", price)}x!`, "success")
+		Net.Event("Fx"):FireClient(player, "deposit", { amount = milk })
 	else
 		Net.Event("Notify"):FireClient(player, "Your can is empty! Fill it at your tank tap", "info")
 	end
@@ -138,6 +139,7 @@ local function onCashTouched(hit: BasePart)
 	data.dairyCash = 0
 	DataService:Replicate(player, "dairyCash")
 	DataService:AddCash(player, cash)
+	Net.Event("Fx"):FireClient(player, "cash", { amount = cash })
 	Net.Event("Notify"):FireClient(player, `+{Format.Cash(cash)}`, "success")
 end
 

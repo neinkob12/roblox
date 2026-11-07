@@ -68,6 +68,7 @@ function MergeService:MergeAll(player: Player, silent: boolean?): number
 	local best = Cows.Get(highestNew)
 	local bestName = if best then best.name else "?"
 	HerdUtil.Notify(player, `MERGED! x{total} (up to {bestName})`, "success")
+	require(ReplicatedStorage.Shared.Net).Event("Fx"):FireClient(player, "merge", { count = total, tier = highestNew })
 	return total
 end
 

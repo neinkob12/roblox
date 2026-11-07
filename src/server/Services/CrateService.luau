@@ -222,6 +222,7 @@ local function spawnCrate(player: Player): boolean
 		data.crates += 1
 		DataService:Replicate(player, "crates")
 		HerdUtil.Notify(player, "Picked up a Mystery Milk Crate!", "rare")
+		Net.Event("Fx"):FireClient(player, "crate", { position = crate.Position })
 		removeCrate(player, crate)
 	end)
 	HerdUtil.Notify(player, "A Mystery Milk Crate dropped on your farm!", "rare")
