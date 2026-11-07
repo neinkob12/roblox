@@ -22,6 +22,7 @@ local Net = require(ReplicatedStorage.Shared.Net)
 local Fx = require(ReplicatedStorage.Shared.Fx)
 local Format = require(ReplicatedStorage.Shared.Format)
 local CowModels = require(ReplicatedStorage.Shared.CowModels)
+local Theme = require(script.Parent.Parent.UI.Theme)
 local DataController = require(script.Parent.DataController)
 
 local player = Players.LocalPlayer
@@ -909,7 +910,8 @@ local function buildGlow()
 	gui.Name = "FxGlow"
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
-	gui.DisplayOrder = 5
+	-- just under the HUD so buttons stay readable through the glow
+	gui.DisplayOrder = Theme.Layers.Hud - 1
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	-- (size, position, gradient rotation) per screen edge; gradient goes opaque edge -> clear center
 	type Edge = { size: UDim2, pos: UDim2, rot: number }
