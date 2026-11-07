@@ -12,6 +12,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Signal = require(ReplicatedStorage.Shared.Signal)
+local Theme = require(script.Parent.Theme)
 local C = require(script.Parent.Components)
 
 local TOP = 8
@@ -27,7 +28,7 @@ local function ensure(): Frame
 	if holder then
 		return holder
 	end
-	local _, root = C.Screen("TopStack", 7)
+	local _, root = C.Screen("TopStack", Theme.Layers.TopStack)
 	local f = Instance.new("Frame")
 	f.Name = "Stack"
 	f.BackgroundTransparency = 1

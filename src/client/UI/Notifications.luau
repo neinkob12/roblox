@@ -188,7 +188,7 @@ local function welcomeBack(milk: number, seconds: number)
 end
 
 function Notifications:Init()
-	local _, r = C.Screen("Notifications", 50)
+	local _, r = C.Screen("Notifications", Theme.Layers.Toasts)
 	root = r
 	stack = Instance.new("Frame")
 	stack.Name = "Stack"
@@ -207,7 +207,7 @@ function Notifications:Init()
 	TopStack.Changed:Connect(place)
 	place()
 
-	local _, p = C.Screen("Popups", 40)
+	local _, p = C.Screen("Popups", Theme.Layers.Popups)
 	popupRoot = p
 
 	Net.Event("Notify").OnClientEvent:Connect(function(text: string, kind: string)

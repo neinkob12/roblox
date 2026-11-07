@@ -93,8 +93,8 @@ local function row(list: Instance, order: number, icon: string, name: string, in
 		name = "Info",
 		text = info,
 		color = Colors.GreyDark,
-		size = UDim2.new(1, -230, 0, 20),
-		position = UDim2.fromOffset(70, 38),
+		size = UDim2.new(1, -230, 0, 22),
+		position = UDim2.fromOffset(70, 40),
 		align = Enum.TextXAlignment.Left,
 		stroke = 0,
 	})

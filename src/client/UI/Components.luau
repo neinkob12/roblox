@@ -325,7 +325,8 @@ end
 
 type PanelEntry = { frame: Frame, scale: UIScale, opened: { () -> () } }
 
--- C6: shrink a panel that would not fit the screen (tiny phones where UIScale hits MinScale).
+-- C6: center a panel in the area left of the side menu (the menu draws above the dimmer, see
+-- Theme.Layers) and shrink it when it would not fit (tiny phones where UIScale hits MinScale).
 local function fitScale(frame: Frame): number
 	local parent = frame.Parent
 	if not parent or not parent:IsA("GuiObject") then
@@ -336,7 +337,9 @@ local function fitScale(frame: Frame): number
 	if w <= 0 or h <= 0 or avail.X.Offset <= 0 or avail.Y.Offset <= 0 then
 		return 1
 	end
-	return math.min(1, (avail.X.Offset - 16) / w, (avail.Y.Offset - 24) / h)
+	local areaW = avail.X.Offset - Theme.MenuReserve
+	frame.Position = UDim2.new(0, areaW / 2, 0.5, 0)
+	return math.min(1, (areaW - 16) / w, (avail.Y.Offset - 24) / h)
 end
 
 local panels: { [string]: PanelEntry } = {}
@@ -349,7 +352,7 @@ local function ensurePanelRoot(): Frame
 	if panelRoot then
 		return panelRoot
 	end
-	local _, root = Components.Screen("Panels", 20)
+	local _, root = Components.Screen("Panels", Theme.Layers.Panels)
 	local d = Instance.new("TextButton")
 	d.Name = "Dim"
 	d.Text = ""

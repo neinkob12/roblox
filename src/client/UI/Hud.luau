@@ -2,9 +2,9 @@
 -- B1: Always-on HUD.
 --   bottom-left   Cash (count-up tween + floating "+$123"), Rebirths, Milk/sec
 --   bottom-center Milk can (canMilk / CanCapacity attribute) + "Selling: $X" / "Collect: $X"
---   top-left      Milk price chip (MilkPrice, countdown to MilkPriceNextAt, green >= 1, red < 1)
---                 + active boosts with timers
---   top-center    "Next event in mm:ss" or active event banner, truck banner when TruckActive
+--   top-center    TopStack (C6): milk price chip (MilkPrice, countdown to MilkPriceNextAt,
+--                 green >= 1, red < 1), "Next event in mm:ss" or active event banner, truck banner
+--                 when TruckActive, active boosts. Moved from top-left, which the chat window covers.
 -- Reads data ONLY through DataController. Timers use workspace:GetServerTimeNow().
 
 local Players = game:GetService("Players")
@@ -139,7 +139,7 @@ local function buildCan()
 		align = Enum.TextXAlignment.Left,
 	})
 
-	sellChip = chip(root, "Selling", Vector2.new(190, 26), Colors.GreenDark)
+	sellChip = chip(root, "Selling", Vector2.new(250, 32), Colors.GreenDark)
 	sellChip.AnchorPoint = Vector2.new(0.5, 1)
 	sellChip.Position = UDim2.new(0.5, 0, 1, -72)
 	sellChip.Visible = false
@@ -153,8 +153,8 @@ local function buildCan()
 end
 
 local function buildTop()
-	priceChip = chip(root, "MilkPrice", Vector2.new(170, 54))
-	priceChip.Position = UDim2.fromOffset(12, 8)
+	priceChip = chip(root, "MilkPrice", Vector2.new(200, 54))
+	TopStack.Add(priceChip, 5)
 	priceText = C.Label(priceChip, {
 		name = "Price",
 		text = "Milk x1.00",
@@ -176,11 +176,11 @@ local function buildTop()
 	boostList = Instance.new("Frame")
 	boostList.Name = "Boosts"
 	boostList.BackgroundTransparency = 1
-	boostList.Position = UDim2.fromOffset(12, 68)
-	boostList.Size = UDim2.fromOffset(170, 120)
+	boostList.Size = UDim2.fromOffset(170, 0)
+	boostList.AutomaticSize = Enum.AutomaticSize.Y
 	boostList.Active = false
-	boostList.Parent = root
-	local l = C.List(boostList, 4, false, Enum.HorizontalAlignment.Left)
+	TopStack.Add(boostList, 40)
+	local l = C.List(boostList, 4, false, Enum.HorizontalAlignment.Center)
 	l.VerticalAlignment = Enum.VerticalAlignment.Top
 
 	-- event + truck share the reserved top-center stack (C6) so they never overlap
@@ -286,7 +286,7 @@ local function updateSelling()
 	if ready > 0 then
 		sellChip.Visible = true
 		sellChip.BackgroundColor3 = Colors.YellowDark
-		sellText.Text = `Collect: {Format.Cash(ready)} at the dairy!`
+		sellText.Text = `Collect {Format.Cash(ready)} at dairy!`
 	elseif queue > 0 then
 		sellChip.Visible = true
 		sellChip.BackgroundColor3 = Colors.GreenDark
@@ -336,6 +336,7 @@ local function updateBoosts(now: number)
 			boostRows[key] = nil
 		end
 	end
+	boostList.Visible = next(boostRows) ~= nil
 end
 
 local function updateTimers()
@@ -386,7 +387,7 @@ local function updateTimers()
 end
 
 function Hud:Init()
-	local _, r = C.Screen("Hud", 5)
+	local _, r = C.Screen("Hud", Theme.Layers.Hud)
 	root = r
 	buildCash()
 	buildCan()

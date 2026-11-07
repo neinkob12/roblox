@@ -35,7 +35,7 @@ function Menu.SetBadge(panel: string, count: number)
 end
 
 function Menu:Init()
-	local _, root = C.Screen("Menu", 6)
+	local _, root = C.Screen("Menu", Theme.Layers.Menu)
 	local holder = Instance.new("Frame")
 	holder.Name = "SideButtons"
 	holder.BackgroundTransparency = 1
