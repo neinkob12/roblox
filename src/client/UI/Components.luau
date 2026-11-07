@@ -8,7 +8,8 @@
 --   Components.Button(parent, props) -> (TextButton, TextLabel)
 --   Components.SetButtonColor(button, color) / SetButtonEnabled(button, enabled, color?)
 --   Components.Tween(inst, time, props, style?, dir?) -> Tween
---   Components.CountUp(label, key, to, fmt)    tweened number text (one tween per key)
+--   Components.CountUp(label, to, fmt, time?)  tweened number text (one NumberValue per label)
+--   Components.Card(parent, height, order?) / ScrollList(parent, padding) / Now() (server time)
 --   Components.Rainbow(stroke)                 animated rainbow UIGradient on a UIStroke
 --   Components.Panel(name, title, size, color?) -> (panel: Frame, body: Frame)
 --   Components.OpenPanel(name) / ClosePanel() / TogglePanel(name) / IsOpen(name)
@@ -232,7 +233,7 @@ function Components.SetButtonEnabled(b: GuiObject, enabled: boolean)
 	end
 end
 
--- Tweened number text. `key` lets a label keep one NumberValue between calls.
+-- Tweened number text. Each label keeps one NumberValue between calls.
 local counters: { [Instance]: NumberValue } = {}
 function Components.CountUp(label: TextLabel, to: number, fmt: (number) -> string, time: number?)
 	local nv = counters[label]
