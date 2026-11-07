@@ -4,7 +4,13 @@
 
 local Events = {}
 
-Events.EverySeconds = 10 * 60
+Events.EverySeconds = 10 * 60 -- gap between the end of one event and the start of the next
+
+-- STUDIO TESTING: set DebugFastInStudio = true to run events every 30s for 20s each.
+-- Set it back to false before merging. (Only applies when RunService:IsStudio().)
+Events.DebugFastInStudio = false
+Events.DebugEverySeconds = 30
+Events.DebugDurationSeconds = 20
 Events.List = {
 	{ id = "DoublePrice", name = "Milk Price Frenzy!", seconds = 180, cashMultiplier = 2 },
 	{ id = "MilkFlood", name = "Milk Flood!", seconds = 180, productionMultiplier = 2 },
