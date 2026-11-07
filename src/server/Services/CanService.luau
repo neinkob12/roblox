@@ -10,6 +10,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Safe = require(ReplicatedStorage.Shared.Safe)
 local Net = require(ReplicatedStorage.Shared.Net)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
@@ -125,7 +126,7 @@ function CanService:Start()
 		for _, player in Players:GetPlayers() do
 			local data = DataService:Get(player)
 			if data then
-				local ok, err = pcall(function()
+				Safe.Run("CanService tick", function()
 					player:SetAttribute("CanCapacity", CanService:GetCanCapacity(player, data))
 					local lvl = (data.upgrades and data.upgrades.autoCollect) or 0
 					if lvl > 0 then
@@ -139,9 +140,6 @@ function CanService:Start()
 						end
 					end
 				end)
-				if not ok then
-					warn(`[CanService] tick failed for {player.Name}: {err}`)
-				end
 			end
 		end
 	end

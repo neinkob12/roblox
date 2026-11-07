@@ -17,6 +17,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
+local Safe = require(ReplicatedStorage.Shared.Safe)
 local Net = require(ReplicatedStorage.Shared.Net)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Events = require(ReplicatedStorage.Shared.Config.Events)
@@ -269,10 +270,7 @@ function CrateService:Start()
 	end)
 	while true do
 		task.wait(CrateConfig.DropCheckSeconds)
-		local ok, err = pcall(rollDrops)
-		if not ok then
-			warn(`[CrateService] drop roll failed: {err}`)
-		end
+		Safe.Run("CrateService drops", rollDrops)
 	end
 end
 
