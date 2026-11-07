@@ -38,7 +38,16 @@ Every module in `src/client/UI/` was checked against the CLAUDE.md mobile rules.
 | 13 | Text scaling | All labels use `TextScaled` inside fixed ref px boxes, so text scales with the `UIScale`. The smallest are the side-button names (19 ref px, about 14 px on the SE) and boost rows (22 ref px). | OK. |
 | 14 | Crate spin window | 640 ref px wide, and the root is at least 811 wide. | Fits. |
 
-## Open items (not C6 files)
+## Reduce motion
 
-- **`RequestSetting` has no server handler.** `Net.luau` declares it and `SettingsPanel` fires it, but nothing in `src/server` listens. The Music, SFX and Voice toggles only change locally and never persist. That is why the **reduce motion toggle was not added** (the issue says to add it only if the server accepts boolean keys). Suggested fix (lead or DataService owner): validate `name` against the keys in `DataService` defaults `settings`, require a boolean `value`, set it and call `Replicate(player, "settings")`. Then add `reduceMotion = false` to the defaults and a toggle row in `SettingsPanel`.
+The lead's SettingsService (#28) accepts `reduceMotion`, so C6 added a **Reduce motion** toggle (default off) to Settings. The panel is now 410 tall, and it fits the SE without shrinking. When it is on:
+
+- Panels open instantly, with no bounce.
+- Rainbow strokes stop spinning.
+- Cash snaps to the new value, with no count-up, no floating "+$X" popup and no pulse.
+
+Other packages can read it with `Components.ReduceMotion()` (UI) or `data.settings.reduceMotion` (C5 FxController, A2 DiscoveryController).
+
+## Notes
+
 - Hud fonts and strokes are already consistent (FredokaOne for body text, LuckiestGuy for titles, stroke 2, stroke 3 or 4 on big numbers). The cash count-up tween and `Format` everywhere were already in place from B1.

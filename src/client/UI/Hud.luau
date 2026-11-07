@@ -253,8 +253,8 @@ local function onCash(cash: number)
 	if typeof(cash) ~= "number" then
 		return
 	end
-	C.CountUp(cashLabel, cash, Format.Cash)
-	if lastCash and cash > lastCash then
+	C.CountUp(cashLabel, cash, Format.Cash, if C.ReduceMotion() then 0.01 else nil)
+	if lastCash and cash > lastCash and not C.ReduceMotion() then
 		cashPopup(cash - lastCash)
 		local s = cashLabel:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
 		s.Parent = cashLabel

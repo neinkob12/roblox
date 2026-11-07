@@ -14,12 +14,14 @@
 --   Components.Panel(name, title, size, color?) -> (panel: Frame, body: Frame)
 --   Components.OpenPanel(name) / ClosePanel() / TogglePanel(name) / IsOpen(name)
 --   Components.OnPanelOpened(name, fn)
+--   Components.ReduceMotion() -> boolean     data.settings.reduceMotion (C6)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Theme = require(script.Parent.Theme)
+local DataController = require(script.Parent.Parent.Controllers.DataController)
 
 local Components = {}
 
@@ -123,6 +125,13 @@ function Components.Label(parent: Instance, props: LabelProps): TextLabel
 	end
 	l.Parent = parent
 	return l
+end
+
+-- True when the player turned on "Reduce motion" in Settings (skip bounces and popups).
+function Components.ReduceMotion(): boolean
+	local data = DataController:Get()
+	local settings = if data and typeof(data.settings) == "table" then data.settings else nil
+	return settings ~= nil and settings.reduceMotion == true
 end
 
 local function darken(c: Color3, amount: number): Color3
@@ -269,7 +278,9 @@ function Components.Rainbow(target: Instance): UIGradient
 			conn:Disconnect()
 			return
 		end
-		g.Rotation = (os.clock() * 120) % 360
+		if not Components.ReduceMotion() then
+			g.Rotation = (os.clock() * 120) % 360
+		end
 	end)
 	return g
 end
@@ -486,8 +497,12 @@ function Components.OpenPanel(name: string)
 	openName = name
 	entry.frame.Visible = true
 	local target = fitScale(entry.frame)
-	entry.scale.Scale = 0.6 * target
-	Components.Tween(entry.scale, 0.25, { Scale = target }, Enum.EasingStyle.Back)
+	if Components.ReduceMotion() then
+		entry.scale.Scale = target
+	else
+		entry.scale.Scale = 0.6 * target
+		Components.Tween(entry.scale, 0.25, { Scale = target }, Enum.EasingStyle.Back)
+	end
 	if dim then
 		dim.Visible = true
 		Components.Tween(dim, 0.2, { BackgroundTransparency = 0.45 })

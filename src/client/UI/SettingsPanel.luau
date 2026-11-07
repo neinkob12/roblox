@@ -1,5 +1,5 @@
 --!strict
--- B1: Settings. Music / SFX / Voice toggles (RequestSetting(name, value), state from
+-- B1: Settings. Music / SFX / Voice / Reduce motion (C6) toggles (RequestSetting(name, value), state from
 -- data.settings) and a code redeem box (Net.Function "RedeemCode" -> ok, message).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,14 +12,17 @@ local DataController = require(script.Parent.Parent.Controllers.DataController)
 
 local Colors = Theme.Colors
 
-local TOGGLES = {
+type ToggleDef = { key: string, label: string, default: boolean? }
+
+local TOGGLES: { ToggleDef } = {
 	{ key = "music", label = "🎵 Music" },
 	{ key = "sfx", label = "🔊 Sound effects" },
 	{ key = "voice", label = "🗣️ Cow voices" },
+	{ key = "reduceMotion", label = "🐢 Reduce motion", default = false },
 }
 
 local REDEEM_TIMEOUT = 8
-local ROW_H = Theme.MinTouch + 6
+local ROW_H = Theme.MinTouch + 2
 
 local SettingsPanel = {}
 
@@ -41,6 +44,11 @@ local function current(key: string): boolean
 	local settings = if data and typeof(data.settings) == "table" then data.settings else nil
 	if settings and typeof(settings[key]) == "boolean" then
 		return settings[key]
+	end
+	for _, def in TOGGLES do
+		if def.key == key and def.default ~= nil then
+			return def.default
+		end
 	end
 	return true
 end
@@ -100,7 +108,7 @@ local function redeem()
 end
 
 function SettingsPanel:Init()
-	local _, body = C.Panel("Settings", "SETTINGS", Vector2.new(480, 370), Colors.Grey)
+	local _, body = C.Panel("Settings", "SETTINGS", Vector2.new(480, 410), Colors.Grey)
 
 	for i, def in TOGGLES do
 		local y = (i - 1) * ROW_H
@@ -132,7 +140,7 @@ function SettingsPanel:Init()
 	end
 
 	-- code redeem
-	local y = #TOGGLES * ROW_H + 8
+	local y = #TOGGLES * ROW_H + 6
 	local boxFrame = Instance.new("Frame")
 	boxFrame.Name = "CodeFrame"
 	boxFrame.BackgroundColor3 = Colors.Card
