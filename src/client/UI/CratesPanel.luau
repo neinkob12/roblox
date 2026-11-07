@@ -13,7 +13,7 @@ local RunService = game:GetService("RunService")
 
 local Net = require(ReplicatedStorage.Shared.Net)
 local Format = require(ReplicatedStorage.Shared.Format)
-local Economy = require(ReplicatedStorage.Shared.Config.Economy)
+local Pricing = require(ReplicatedStorage.Shared.Pricing)
 local Cows = require(ReplicatedStorage.Shared.Config.Cows)
 local CowModels = require(ReplicatedStorage.Shared.CowModels)
 local Theme = require(script.Parent.Theme)
@@ -43,9 +43,8 @@ local spinning = false
 local spinRoot: Frame
 
 local function buyPrice(): number
-	local mps = player:GetAttribute("MilkPerSecond")
-	local n = if typeof(mps) == "number" then mps else 0
-	return math.floor(math.max(Economy.Crate.BuyBasePrice, n * Economy.Crate.BuyPriceSecondsOfProduction))
+	-- same formula the server charges (shared/Pricing), so the button never lies
+	return Pricing.Crate(player, DataController:Get())
 end
 
 local function refresh()
@@ -363,6 +362,7 @@ end
 function CratesPanel:Start()
 	DataController:OnChanged("crates", refresh)
 	DataController:OnChanged("cash", refresh)
+	DataController:OnChanged("cratesBought", refresh)
 	player:GetAttributeChangedSignal("MilkPerSecond"):Connect(refresh)
 	C.OnPanelOpened("Crates", refresh)
 	Net.Event("CrateOpened").OnClientEvent:Connect(function(tier: number, source: string)
