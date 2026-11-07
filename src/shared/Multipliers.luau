@@ -11,6 +11,7 @@
 local Economy = require(script.Parent.Config.Economy)
 local Upgrades = require(script.Parent.Config.Upgrades)
 local Events = require(script.Parent.Config.Events)
+local Pets = require(script.Parent.Config.Pets)
 
 local Multipliers = {}
 
@@ -42,6 +43,54 @@ local function boostMult(data: any, kind: string): number
 	return m
 end
 
+-- F1 pets (added by F1, reviewed by lead) -------------------------------------------------
+-- Summed bonus of the equipped pets for one kind ("milk" | "cash" | "speed" | "luck"), e.g. 0.25 =
+-- +25%. Only the first Pets.SlotsFor(rebirths) equipped uids that are really owned count.
+-- Caps: speed <= Pets.SpeedCap, luck <= Pets.LuckCap.
+function Multipliers.PetBonus(data: any, kind: string): number
+	local pets = data and data.pets
+	local equipped = data and data.equippedPets
+	if typeof(pets) ~= "table" or typeof(equipped) ~= "table" then
+		return 0
+	end
+	local slots = Pets.SlotsFor(data.rebirths or 0)
+	local total = 0
+	for i, uid in equipped do
+		if i > slots then
+			break
+		end
+		local pet = pets[uid]
+		if typeof(pet) == "table" then
+			local k, value = Pets.Boost(pet.id, pet.variant)
+			if k == kind then
+				total += value
+			end
+		end
+	end
+	if kind == "speed" then
+		total = math.min(total, Pets.SpeedCap)
+	elseif kind == "luck" then
+		total = math.min(total, Pets.LuckCap)
+	end
+	return total
+end
+
+-- Permanent pet index milk bonus: 1 + IndexMilkPerStep x floor(discovered entries / IndexStep)
+function Multipliers.PetIndexMilk(data: any): number
+	local index = data and data.petIndex
+	if typeof(index) ~= "table" then
+		return 1
+	end
+	local n = 0
+	for key, v in index do
+		if v == true and typeof(key) == "string" then
+			n += 1
+		end
+	end
+	return 1 + Pets.IndexMilkPerStep * (n // Pets.IndexStep)
+end
+-- end F1 pets ----------------------------------------------------------------------------
+
 function Multipliers.Cash(player: Player, data: any): number
 	local m = 1 + Economy.Rebirth.CashMultiplierPerRebirth * (data.rebirths or 0)
 	if player:GetAttribute("Pass_DoubleCash") then
@@ -55,6 +104,7 @@ function Multipliers.Cash(player: Player, data: any): number
 	if ev and ev.cashMultiplier then
 		m *= ev.cashMultiplier
 	end
+	m *= 1 + Multipliers.PetBonus(data, "cash") -- F1 pets
 	return m * boostMult(data, "cash")
 end
 
@@ -65,6 +115,7 @@ function Multipliers.Production(_player: Player, data: any): number
 	if ev and ev.productionMultiplier then
 		m *= ev.productionMultiplier
 	end
+	m *= (1 + Multipliers.PetBonus(data, "milk")) * Multipliers.PetIndexMilk(data) -- F1 pets
 	return m * boostMult(data, "production")
 end
 

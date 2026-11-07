@@ -1,5 +1,5 @@
 --!strict
--- A4: Humanoid.WalkSpeed = BASE + walkSpeed upgrade level * perLevel.
+-- A4: Humanoid.WalkSpeed = (BASE + walkSpeed upgrade level * perLevel) x (1 + pet speed bonus).
 -- Applied on spawn, on data load, and whenever UpgradeService / RebirthService call Apply.
 --
 --   WalkSpeedService:Apply(player)
@@ -8,6 +8,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
+local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
 local DataService = require(script.Parent.DataService)
 
 local BASE_WALK_SPEED = 16
@@ -22,7 +23,8 @@ function WalkSpeedService:Apply(player: Player)
 		return
 	end
 	local level = (data.upgrades and data.upgrades.walkSpeed) or 0
-	humanoid.WalkSpeed = BASE_WALK_SPEED + level * Upgrades.ById.walkSpeed.perLevel
+	local speed = BASE_WALK_SPEED + level * Upgrades.ById.walkSpeed.perLevel
+	humanoid.WalkSpeed = speed * (1 + Multipliers.PetBonus(data, "speed")) -- F1 speed pets
 end
 
 local function onCharacter(player: Player, character: Model)

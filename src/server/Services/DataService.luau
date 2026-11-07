@@ -68,6 +68,12 @@ local TEMPLATE = {
 	lastOnline = 0, -- os.time() of last save, used for offline earnings
 	firstJoin = 0,
 	tutorialStep = 0, -- C4 TutorialService; 0 = not started, Config/Tutorial.Done = finished
+	-- F1 pets / eggs (shapes documented in PetService / EggService). Kept on rebirth.
+	pets = {} :: { [string]: { id: string, variant: string } },
+	equippedPets = {} :: { string },
+	nests = {} :: { [string]: { egg: string, readyAt: number, luck: number } },
+	petIndex = {} :: { [string]: boolean },
+	lastFreeEgg = 0,
 }
 
 local DataService = {}
