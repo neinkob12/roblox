@@ -19,6 +19,7 @@ local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Net = require(ReplicatedStorage.Shared.Net)
+local Safe = require(ReplicatedStorage.Shared.Safe)
 local Fx = require(ReplicatedStorage.Shared.Fx)
 local Format = require(ReplicatedStorage.Shared.Format)
 local CowModels = require(ReplicatedStorage.Shared.CowModels)
@@ -188,10 +189,11 @@ end
 
 local function step(dt: number)
 	for i = #updaters, 1, -1 do
-		local ok, alive = pcall(updaters[i], dt)
-		if not ok then
-			warn("[FxController] effect error: " .. tostring(alive))
-		end
+		local updater = updaters[i]
+		local alive = false
+		local ok = Safe.Run("FxController effect", function()
+			alive = updater(dt)
+		end)
 		if not ok or not alive then
 			-- swap-remove (order does not matter)
 			updaters[i] = updaters[#updaters]
@@ -201,18 +203,18 @@ local function step(dt: number)
 end
 
 -- Runs fn(t) every frame with t going 0 -> 1 over `duration`, then calls done().
+-- done() always runs, even when fn errors, so pooled parts are always released.
 local function animate(duration: number, fn: (number) -> (), done: (() -> ())?)
 	local start = os.clock()
 	addUpdater(function()
-		local t = (os.clock() - start) / duration
-		if t >= 1 then
-			fn(1)
+		local t = math.min((os.clock() - start) / duration, 1)
+		local ok = Safe.Run("FxController animation", fn, t)
+		if t >= 1 or not ok then
 			if done then
-				done()
+				Safe.Run("FxController cleanup", done)
 			end
 			return false
 		end
-		fn(t)
 		return true
 	end)
 end
@@ -374,10 +376,17 @@ local function floatText(pos: Vector3, text: string, color: Color3, big: boolean
 	item.gui.Size = if big then Fx.Text.BigSize else Fx.Text.SmallSize
 	item.part.CFrame = CFrame.new(pos)
 	item.gui.Enabled = true
-	local jitter = Vector3.new((math.random() - 0.5) * 1.5, 0, (math.random() - 0.5) * 1.5)
+	local calm = reducedMotion()
+	local jitter = if calm
+		then Vector3.zero
+		else Vector3.new((math.random() - 0.5) * 1.5, 0, (math.random() - 0.5) * 1.5)
 	animate(Fx.Text.Life, function(t)
 		item.part.CFrame = CFrame.new(pos + jitter + Vector3.new(0, Fx.Text.Rise * easeOutQuad(t), 0))
-		local s = if t < 0.12 then t / 0.12 * 1.25 elseif t < 0.22 then 1.25 - (t - 0.12) / 0.1 * 0.25 else 1
+		local s = if calm
+			then math.min(t / 0.12, 1)
+			elseif t < 0.12 then t / 0.12 * 1.25
+			elseif t < 0.22 then 1.25 - (t - 0.12) / 0.1 * 0.25
+			else 1
 		item.scale.Scale = s
 		local fade = if t > 0.6 then (t - 0.6) / 0.4 else 0
 		item.label.TextTransparency = fade
@@ -403,16 +412,17 @@ local function flash(cf: CFrame, shape: Enum.PartType, color: Color3, from: Vect
 	end)
 end
 
-local function coinBurst(from: Vector3, count: number)
+local function coinBurst(from: Vector3, count: number, calm: boolean)
 	local coins = Fx.Coins
+	local arc = if calm then coins.ArcHeight * Fx.Calm.CoinArcScale else coins.ArcHeight
 	for i = 1, count do
 		local coin = acquireCoin()
 		if not coin then
 			return
 		end
 		local c = coin :: Part
-		local side = Vector3.new((math.random() - 0.5) * 8, 0, (math.random() - 0.5) * 8)
-		local spin = (math.random() * 2 - 1) * 4 + 14
+		local side = if calm then Vector3.zero else Vector3.new((math.random() - 0.5) * 8, 0, (math.random() - 0.5) * 8)
+		local spin = if calm then 0 else (math.random() * 2 - 1) * 4 + 14
 		task.delay((i - 1) * coins.Stagger, function()
 			c.Transparency = 0
 			local start = from + Vector3.new(0, 0.5, 0)
@@ -421,7 +431,7 @@ local function coinBurst(from: Vector3, count: number)
 				local root = rootPart()
 				local target = if root then root.Position else lastTarget
 				lastTarget = target
-				local ctrl = (start + target) / 2 + side + Vector3.new(0, coins.ArcHeight, 0)
+				local ctrl = (start + target) / 2 + side + Vector3.new(0, arc, 0)
 				local a = start:Lerp(ctrl, t)
 				local b = ctrl:Lerp(target, t)
 				local pos = a:Lerp(b, t)
@@ -468,8 +478,11 @@ local function onCash(payload: any)
 	if not from or not nearCamera(from) or not begin(1.5) then
 		return
 	end
-	local count = math.clamp(math.floor(math.log10(amount + 1) * 2.5), Fx.Coins.Min, Fx.Coins.Max)
-	coinBurst(from, count)
+	local calm = reducedMotion()
+	local count = if calm
+		then Fx.Coins.Min
+		else math.clamp(math.floor(math.log10(amount + 1) * 2.5), Fx.Coins.Min, Fx.Coins.Max)
+	coinBurst(from, count, calm)
 	floatText(from + Vector3.new(0, 4, 0), "+" .. Format.Cash(amount), Fx.Text.CashColor, true)
 	emitAt(sparkle, from + Vector3.new(0, 1, 0), 18, Fx.Coins.Color)
 end
@@ -515,7 +528,7 @@ local function onMerge(payload: any)
 	-- the new tier's cow model may replicate a moment after this remote
 	task.delay(0.15, function()
 		local cow = stall and stall:FindFirstChild("Cow")
-		if cow and cow:IsA("Model") then
+		if cow and cow:IsA("Model") and not reducedMotion() then
 			popScale(cow, 0.35, 0.4)
 		end
 	end)
@@ -560,7 +573,8 @@ local function dropCow(source: Model?, land: Vector3, delay: number)
 		local m = model :: Model
 		prepClone(m)
 		local yaw = CFrame.Angles(0, math.random() * math.pi * 2, 0)
-		local height = 14
+		local calm = reducedMotion()
+		local height = if calm then Fx.Calm.DropHeight else 14
 		m:PivotTo(CFrame.new(land + Vector3.new(0, height, 0)) * yaw)
 		m.Parent = fxFolder
 		local okScale, base = pcall(function()
@@ -573,7 +587,8 @@ local function dropCow(source: Model?, land: Vector3, delay: number)
 		animate(total, function(t)
 			local s = t * total
 			if s < dropTime then
-				local y = height * (1 - bounceOut(s / dropTime))
+				local k = s / dropTime
+				local y = height * (1 - (if calm then easeOutQuad(k) else bounceOut(k)))
 				m:PivotTo(CFrame.new(land + Vector3.new(0, y, 0)) * yaw)
 			elseif s < dropTime + holdTime then
 				if not landed then
@@ -630,6 +645,37 @@ local shakeTime = 0
 local shakeDeg = 0
 local shakeBound = false
 
+local shakeApplied = CFrame.identity
+
+-- Before the camera scripts: remove last frame's offset, so they never read it back.
+local function undoShake()
+	local camera = workspace.CurrentCamera
+	if camera and shakeApplied ~= CFrame.identity then
+		camera.CFrame = camera.CFrame * shakeApplied:Inverse()
+	end
+	shakeApplied = CFrame.identity
+	if not shakeBound then
+		RunService:UnbindFromRenderStep("FxShakeUndo")
+	end
+end
+
+-- After the camera scripts: apply this frame's offset (removed again next frame).
+local function applyShake()
+	local t = (os.clock() - shakeStart) / shakeTime
+	local camera = workspace.CurrentCamera
+	if t >= 1 or not camera then
+		shakeBound = false
+		shakeDeg = 0
+		RunService:UnbindFromRenderStep("FxShake")
+		return
+	end
+	local now = os.clock() * 28
+	local a = math.rad(shakeDeg * (1 - t))
+	local offset = CFrame.Angles(math.noise(now, 0.3) * a, math.noise(now, 7.1) * a, math.noise(now, 13.7) * a * 0.5)
+	camera.CFrame = camera.CFrame * offset
+	shakeApplied = offset
+end
+
 local function shake(degrees: number, duration: number)
 	if reducedMotion() then
 		return
@@ -641,20 +687,9 @@ local function shake(degrees: number, duration: number)
 		return
 	end
 	shakeBound = true
-	RunService:BindToRenderStep("FxShake", Enum.RenderPriority.Camera.Value + 1, function()
-		local t = (os.clock() - shakeStart) / shakeTime
-		local camera = workspace.CurrentCamera
-		if t >= 1 or not camera then
-			shakeBound = false
-			shakeDeg = 0
-			RunService:UnbindFromRenderStep("FxShake")
-			return
-		end
-		local now = os.clock() * 28
-		local a = math.rad(shakeDeg * (1 - t))
-		camera.CFrame = camera.CFrame
-			* CFrame.Angles(math.noise(now, 0.3) * a, math.noise(now, 7.1) * a, math.noise(now, 13.7) * a * 0.5)
-	end)
+	-- rebinding the same name replaces it, so this is safe if the undo step is still bound
+	RunService:BindToRenderStep("FxShakeUndo", Enum.RenderPriority.Camera.Value - 1, undoShake)
+	RunService:BindToRenderStep("FxShake", Enum.RenderPriority.Camera.Value + 1, applyShake)
 end
 
 local glowToken = 0
@@ -811,11 +846,12 @@ local function squish(state: PadState)
 	local size, cf = pad.Size, pad.CFrame
 	local low = Fx.Pad.SquishScale
 	local bright = pad.Color:Lerp(Color3.new(1, 1, 1), 0.35)
+	local wobble = if reducedMotion() then 0 else 0.6
 	animate(Fx.Pad.SquishTime, function(t)
 		-- squeeze in during the first 40%, then a damped overshoot back to 1
 		local k = if t < 0.4
 			then 1 - (1 - low) * math.sin(t / 0.4 * math.pi / 2)
-			else 1 + (1 - low) * 0.6 * math.sin((t - 0.4) / 0.6 * math.pi * 2) * (1 - t)
+			else 1 + (1 - low) * wobble * math.sin((t - 0.4) / 0.6 * math.pi * 2) * (1 - t)
 		local y = 1 + (1 - k) * 1.5
 		vis.Size = Vector3.new(size.X * k, size.Y * y, size.Z * k)
 		vis.CFrame = cf
