@@ -66,7 +66,7 @@ function BuyService:Start()
 	-- live prices (cash changes constantly, so a cheap poll is simplest)
 	while true do
 		for _, player in Players:GetPlayers() do
-			local ok, err = pcall(BuyService.RefreshLabels, BuyService, player)
+			local ok, err = (pcall :: any)(BuyService.RefreshLabels, BuyService, player)
 			if not ok then
 				warn(`[BuyService] label refresh failed for {player.Name}: {err}`)
 			end

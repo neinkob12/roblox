@@ -249,13 +249,15 @@ end
 local shapeFree: { Part } = {}
 
 local function acquireShape(shape: Enum.PartType, color: Color3): Part
-	local p = table.remove(shapeFree)
-	if not p then
-		p = fxPart()
-		p.Name = "FxShape"
-		p.Parent = fxFolder
+	local reused = table.remove(shapeFree)
+	local part: Part
+	if reused then
+		part = reused
+	else
+		part = fxPart()
+		part.Name = "FxShape"
+		part.Parent = fxFolder
 	end
-	local part = p :: Part
 	part.Shape = shape
 	part.Color = color
 	return part
@@ -910,22 +912,23 @@ local function buildGlow()
 	gui.DisplayOrder = 5
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	-- (size, position, gradient rotation) per screen edge; gradient goes opaque edge -> clear center
-	local edges = {
-		{ UDim2.fromScale(1, 0.22), UDim2.fromScale(0, 0), 90 },
-		{ UDim2.fromScale(1, 0.22), UDim2.fromScale(0, 0.78), -90 },
-		{ UDim2.fromScale(0.14, 1), UDim2.fromScale(0, 0), 0 },
-		{ UDim2.fromScale(0.14, 1), UDim2.fromScale(0.86, 0), 180 },
+	type Edge = { size: UDim2, pos: UDim2, rot: number }
+	local edges: { Edge } = {
+		{ size = UDim2.fromScale(1, 0.22), pos = UDim2.fromScale(0, 0), rot = 90 },
+		{ size = UDim2.fromScale(1, 0.22), pos = UDim2.fromScale(0, 0.78), rot = -90 },
+		{ size = UDim2.fromScale(0.14, 1), pos = UDim2.fromScale(0, 0), rot = 0 },
+		{ size = UDim2.fromScale(0.14, 1), pos = UDim2.fromScale(0.86, 0), rot = 180 },
 	}
 	for _, e in edges do
 		local f = Instance.new("Frame")
-		f.Size = e[1] :: UDim2
-		f.Position = e[2] :: UDim2
+		f.Size = e.size
+		f.Position = e.pos
 		f.BorderSizePixel = 0
 		f.BackgroundTransparency = 1
 		f.Visible = false
 		f.Active = false
 		local g = Instance.new("UIGradient")
-		g.Rotation = e[3] :: number
+		g.Rotation = e.rot
 		g.Transparency = NumberSequence.new({
 			NumberSequenceKeypoint.new(0, 0),
 			NumberSequenceKeypoint.new(1, 1),
@@ -989,7 +992,10 @@ function FxController:Init()
 			return
 		end
 		local p = if typeof(payload) == "table" then payload else {}
-		local ok, err = pcall(handler, p)
+		local ok, err = pcall(function(): any
+			handler(p)
+			return nil
+		end)
 		if not ok then
 			warn(`[FxController] {kind} failed: {err}`)
 		end

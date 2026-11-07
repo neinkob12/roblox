@@ -270,7 +270,7 @@ function CrateService:Start()
 	end)
 	while true do
 		task.wait(CrateConfig.DropCheckSeconds)
-		local ok, err = pcall(rollDrops)
+		local ok, err = (pcall :: any)(rollDrops)
 		if not ok then
 			warn(`[CrateService] drop roll failed: {err}`)
 		end
