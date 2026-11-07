@@ -20,8 +20,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Net = require(ReplicatedStorage.Shared.Net)
 local Format = require(ReplicatedStorage.Shared.Format)
-local Theme = require(script.Parent.Theme)
-local C = require(script.Parent.Components)
+local Theme = require(script.Parent.Parent.Lib.Theme)
+local C = require(script.Parent.Parent.Lib.UiKit)
+local Panels = require(script.Parent.Components)
 local Menu = require(script.Parent.Menu)
 local DataController = require(script.Parent.Parent.Controllers.DataController)
 
@@ -232,7 +233,7 @@ local function updateTimer()
 end
 
 function QuestsPanel:Init()
-	local _, body = C.Panel("Quests", "QUESTS", Vector2.new(560, 360), Colors.Blue)
+	local _, body = Panels.Panel("Quests", "QUESTS", Vector2.new(560, 360), Colors.Blue)
 	local holder = Instance.new("Frame")
 	holder.BackgroundTransparency = 1
 	holder.Size = UDim2.new(1, 0, 1, -26)
@@ -260,7 +261,7 @@ end
 
 function QuestsPanel:Start()
 	DataController:OnChanged("quests", refresh)
-	C.OnPanelOpened("Quests", refresh)
+	Panels.OnPanelOpened("Quests", refresh)
 	refresh()
 	while true do
 		updateTimer()

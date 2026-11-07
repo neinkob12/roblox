@@ -12,8 +12,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Signal = require(ReplicatedStorage.Shared.Signal)
-local Theme = require(script.Parent.Theme)
-local C = require(script.Parent.Components)
+local Theme = require(script.Parent.Parent.Lib.Theme)
+local C = require(script.Parent.Parent.Lib.UiKit)
 
 local TOP = 8
 local GAP = 6

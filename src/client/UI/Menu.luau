@@ -3,8 +3,9 @@
 -- above the mobile jump button; C6 added Index and moved the grid up, see docs/MOBILE_AUDIT.md).
 -- Each one toggles a panel registered with Components.Panel(name, ...).
 
-local Theme = require(script.Parent.Theme)
-local C = require(script.Parent.Components)
+local Theme = require(script.Parent.Parent.Lib.Theme)
+local C = require(script.Parent.Parent.Lib.UiKit)
+local Panels = require(script.Parent.Components)
 
 local Colors = Theme.Colors
 
@@ -57,7 +58,7 @@ function Menu:Init()
 			color = def.color,
 			order = i,
 			onClick = function()
-				C.TogglePanel(def.panel)
+				Panels.TogglePanel(def.panel)
 			end,
 		})
 		caption.Size = UDim2.new(1, -16, 0.6, -4)

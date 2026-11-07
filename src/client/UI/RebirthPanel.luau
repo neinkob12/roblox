@@ -9,8 +9,9 @@ local Net = require(ReplicatedStorage.Shared.Net)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Pricing = require(ReplicatedStorage.Shared.Pricing)
-local Theme = require(script.Parent.Theme)
-local C = require(script.Parent.Components)
+local Theme = require(script.Parent.Parent.Lib.Theme)
+local C = require(script.Parent.Parent.Lib.UiKit)
+local Panels = require(script.Parent.Components)
 local DataController = require(script.Parent.Parent.Controllers.DataController)
 
 local Colors = Theme.Colors
@@ -58,7 +59,7 @@ local function refresh()
 end
 
 function RebirthPanel:Init()
-	local _, body = C.Panel("Rebirth", "REBIRTH", Vector2.new(480, 330), Colors.Pink)
+	local _, body = Panels.Panel("Rebirth", "REBIRTH", Vector2.new(480, 330), Colors.Pink)
 
 	multText = C.Label(body, {
 		name = "Multiplier",
@@ -128,7 +129,7 @@ function RebirthPanel:Init()
 			end
 			disarm()
 			Net.Event("RequestRebirth"):FireServer()
-			C.ClosePanel()
+			Panels.ClosePanel()
 		end,
 	})
 end
@@ -136,7 +137,7 @@ end
 function RebirthPanel:Start()
 	DataController:OnChanged("cash", refresh)
 	DataController:OnChanged("rebirths", refresh)
-	C.OnPanelOpened("Rebirth", function()
+	Panels.OnPanelOpened("Rebirth", function()
 		disarm()
 		refresh()
 	end)

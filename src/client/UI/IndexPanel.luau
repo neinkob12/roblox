@@ -10,8 +10,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Cows = require(ReplicatedStorage.Shared.Config.Cows)
 local Format = require(ReplicatedStorage.Shared.Format)
-local Theme = require(script.Parent.Theme)
-local C = require(script.Parent.Components)
+local Theme = require(script.Parent.Parent.Lib.Theme)
+local C = require(script.Parent.Parent.Lib.UiKit)
+local Panels = require(script.Parent.Components)
 local DataController = require(script.Parent.Parent.Controllers.DataController)
 local DiscoveryController = require(script.Parent.Parent.Controllers.DiscoveryController)
 local CowViewport = require(script.Parent.Parent.Lib.CowViewport)
@@ -85,7 +86,7 @@ local function refresh()
 end
 
 function IndexPanel:Init()
-	local _, body = C.Panel("Index", "COW INDEX", Vector2.new(600, 380), Colors.Orange)
+	local _, body = Panels.Panel("Index", "COW INDEX", Vector2.new(600, 380), Colors.Orange)
 
 	-- header: progress text over a bar
 	local bar = Instance.new("Frame")
@@ -191,7 +192,7 @@ function IndexPanel:Init()
 			if not isDiscovered(DataController:Get(), t) then
 				return
 			end
-			C.ClosePanel()
+			Panels.ClosePanel()
 			DiscoveryController:Show(t)
 		end)
 
@@ -202,7 +203,7 @@ end
 
 function IndexPanel:Start()
 	DataController:OnChanged("discovered", refresh)
-	C.OnPanelOpened("Index", function()
+	Panels.OnPanelOpened("Index", function()
 		built = true
 		refresh()
 	end)

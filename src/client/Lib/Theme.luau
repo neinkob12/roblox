@@ -2,7 +2,7 @@
 -- B1: Colors, fonts and sizes for every screen. Pure data (no Init/Start).
 --
 -- Layout is designed at a REFERENCE resolution (iPhone landscape, ~900x420 logical px) in
--- plain pixel offsets. Components.Screen() adds a UIScale that maps the reference size to
+-- plain pixel offsets. UiKit.Screen() adds a UIScale that maps the reference size to
 -- the real viewport, so everything stays proportional on phones, tablets and PC.
 
 local Theme = {}

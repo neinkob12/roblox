@@ -10,8 +10,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Format = require(ReplicatedStorage.Shared.Format)
 local Products = require(ReplicatedStorage.Shared.Config.Products)
-local Theme = require(script.Parent.Theme)
-local C = require(script.Parent.Components)
+local Theme = require(script.Parent.Parent.Lib.Theme)
+local C = require(script.Parent.Parent.Lib.UiKit)
+local Panels = require(script.Parent.Components)
 local Notifications = require(script.Parent.Notifications)
 
 local player = Players.LocalPlayer
@@ -116,7 +117,7 @@ local function header(list: Instance, order: number, text: string)
 end
 
 function ShopPanel:Init()
-	local _, body = C.Panel("Shop", "SHOP", Vector2.new(580, 370), Colors.Purple)
+	local _, body = Panels.Panel("Shop", "SHOP", Vector2.new(580, 370), Colors.Purple)
 	local list = C.ScrollList(body, 8)
 	local order = 0
 	local function nextOrder(): number
@@ -174,7 +175,7 @@ function ShopPanel:Start()
 	for _, key in PASS_ORDER do
 		player:GetAttributeChangedSignal("Pass_" .. key):Connect(refreshPasses)
 	end
-	C.OnPanelOpened("Shop", refreshPasses)
+	Panels.OnPanelOpened("Shop", refreshPasses)
 	refreshPasses()
 end
 

@@ -5,8 +5,9 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Net = require(ReplicatedStorage.Shared.Net)
-local Theme = require(script.Parent.Theme)
-local C = require(script.Parent.Components)
+local Theme = require(script.Parent.Parent.Lib.Theme)
+local C = require(script.Parent.Parent.Lib.UiKit)
+local Panels = require(script.Parent.Components)
 local Notifications = require(script.Parent.Notifications)
 local DataController = require(script.Parent.Parent.Controllers.DataController)
 
@@ -108,7 +109,7 @@ local function redeem()
 end
 
 function SettingsPanel:Init()
-	local _, body = C.Panel("Settings", "SETTINGS", Vector2.new(480, 410), Colors.Grey)
+	local _, body = Panels.Panel("Settings", "SETTINGS", Vector2.new(480, 410), Colors.Grey)
 
 	for i, def in TOGGLES do
 		local y = (i - 1) * ROW_H
@@ -193,7 +194,7 @@ function SettingsPanel:Start()
 		end
 		refresh()
 	end)
-	C.OnPanelOpened("Settings", refresh)
+	Panels.OnPanelOpened("Settings", refresh)
 	refresh()
 end
 

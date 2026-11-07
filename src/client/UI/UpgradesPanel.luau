@@ -8,8 +8,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Net = require(ReplicatedStorage.Shared.Net)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
-local Theme = require(script.Parent.Theme)
-local C = require(script.Parent.Components)
+local Theme = require(script.Parent.Parent.Lib.Theme)
+local C = require(script.Parent.Parent.Lib.UiKit)
+local Panels = require(script.Parent.Components)
 local DataController = require(script.Parent.Parent.Controllers.DataController)
 local Capacity = require(ReplicatedStorage.Shared.Capacity)
 
@@ -60,7 +61,7 @@ local function refresh()
 end
 
 function UpgradesPanel:Init()
-	local _, body = C.Panel("Upgrades", "UPGRADES", Vector2.new(560, 360), Colors.Green)
+	local _, body = Panels.Panel("Upgrades", "UPGRADES", Vector2.new(560, 360), Colors.Green)
 	local list = C.ScrollList(body, 8)
 	for i, u in Upgrades.List do
 		local card = C.Card(list, 84, i)
@@ -109,7 +110,7 @@ end
 function UpgradesPanel:Start()
 	DataController:OnChanged("cash", refresh)
 	DataController:OnChanged("upgrades", refresh)
-	C.OnPanelOpened("Upgrades", refresh)
+	Panels.OnPanelOpened("Upgrades", refresh)
 	refresh()
 end
 

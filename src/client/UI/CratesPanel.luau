@@ -15,9 +15,10 @@ local Net = require(ReplicatedStorage.Shared.Net)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Pricing = require(ReplicatedStorage.Shared.Pricing)
 local Cows = require(ReplicatedStorage.Shared.Config.Cows)
-local Theme = require(script.Parent.Theme)
+local Theme = require(script.Parent.Parent.Lib.Theme)
 local RevealQueue = require(script.Parent.Parent.Lib.RevealQueue)
-local C = require(script.Parent.Components)
+local C = require(script.Parent.Parent.Lib.UiKit)
+local Panels = require(script.Parent.Components)
 local Menu = require(script.Parent.Menu)
 local DataController = require(script.Parent.Parent.Controllers.DataController)
 local CowViewport = require(script.Parent.Parent.Lib.CowViewport)
@@ -248,7 +249,7 @@ end
 ------------------------------------------------------------------------------ panel
 
 function CratesPanel:Init()
-	local _, body = C.Panel("Crates", "MYSTERY CRATES", Vector2.new(460, 300), Colors.Yellow)
+	local _, body = Panels.Panel("Crates", "MYSTERY CRATES", Vector2.new(460, 300), Colors.Yellow)
 
 	local icon = C.Label(body, {
 		name = "Icon",
@@ -312,7 +313,7 @@ function CratesPanel:Start()
 	DataController:OnChanged("cash", refresh)
 	DataController:OnChanged("cratesBought", refresh)
 	player:GetAttributeChangedSignal("MilkPerSecond"):Connect(refresh)
-	C.OnPanelOpened("Crates", refresh)
+	Panels.OnPanelOpened("Crates", refresh)
 	Net.Event("CrateOpened").OnClientEvent:Connect(function(tier: number, source: string)
 		if typeof(tier) ~= "number" or not Cows.Get(tier) then
 			return
