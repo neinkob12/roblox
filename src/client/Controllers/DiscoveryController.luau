@@ -20,6 +20,7 @@ local CowModels = require(ReplicatedStorage.Shared.CowModels)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Net = require(ReplicatedStorage.Shared.Net)
 local RevealQueue = require(script.Parent.Parent.Lib.RevealQueue)
+local SoundController = require(script.Parent.SoundController)
 local Theme = require(script.Parent.Parent.UI.Theme)
 
 local AUTO_CLOSE = 7
@@ -427,6 +428,7 @@ function DiscoveryController:Show(tier: number)
 	end
 	-- shared full-screen queue (C6): waits for a running crate spin, priority after spins
 	RevealQueue.Push(function()
+		SoundController:PlayDiscovery(tier)
 		play(tier)
 	end, 10)
 end

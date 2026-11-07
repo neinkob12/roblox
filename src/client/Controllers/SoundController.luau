@@ -1,6 +1,7 @@
 --!strict
 -- C3: all client audio. Server-authoritative game, so this only LISTENS:
---   remotes   Notify(kind), CowDiscovered(tier), CrateOpened(tier), PlaySound(name)
+--   remotes   Notify(kind), PlaySound(name)
+--   reveals   DiscoveryController / CratesPanel call PlayDiscovery / Play inside their RevealQueue item
 --   data      cash up (coin / cash collect), cowsBought up (buy), stats.merges up (merge),
 --             upgrades level up, rebirths up, canMilk up (can fill), dairyQueue up (deposit)
 --   world     workspace TruckActive, EventId, your plot's stalls (ambient moos) and tank (pipe loop)
@@ -12,6 +13,7 @@
 -- API for other client modules:
 --   SoundController:Play(name, parent?)   parent = BasePart/Attachment for 3D, nil for 2D
 --   SoundController:PlayVoice(tier)
+--   SoundController:PlayDiscovery(tier)   fanfare + voice, call from inside the queued reveal
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -93,6 +95,14 @@ end
 
 function SoundController:PlayVoice(tier: number)
 	SoundController:Play(`Voice{tier}`)
+end
+
+-- "NEW COW!" moment: fanfare, then the cow's name shout. Call when the reveal overlay appears.
+function SoundController:PlayDiscovery(tier: number)
+	SoundController:Play("NewCowFanfare")
+	task.delay(Tuning.VoiceAfterFanfare, function()
+		SoundController:PlayVoice(tier)
+	end)
 end
 
 local function play(name: string, parent: Instance?)
@@ -418,22 +428,9 @@ function SoundController:Start()
 		end
 	end)
 
-	Net.Event("CowDiscovered").OnClientEvent:Connect(function(tier: any)
-		play("NewCowFanfare")
-		if typeof(tier) == "number" then
-			task.delay(Tuning.VoiceAfterFanfare, function()
-				SoundController:PlayVoice(tier)
-			end)
-		end
-	end)
-
-	Net.Event("CrateOpened").OnClientEvent:Connect(function(_tier: any, _source: any)
-		lastBig = os.clock()
-		play("CrateSpin")
-		task.delay(Tuning.CrateRevealDelay, function()
-			play("CrateReveal")
-		end)
-	end)
+	-- CowDiscovered / CrateOpened sounds are NOT played here: the visuals are serialized by
+	-- Lib/RevealQueue, so DiscoveryController and CratesPanel call PlayDiscovery / Play from
+	-- inside their queued reveal (the fanfare never spoils a crate spin).
 
 	Net.Event("PlaySound").OnClientEvent:Connect(function(name: any)
 		if typeof(name) == "string" then
