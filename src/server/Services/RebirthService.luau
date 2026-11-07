@@ -46,6 +46,7 @@ local function onRequest(player: Player)
 	end
 	data.cows = cows
 	data.cowsBought = 0
+	data.cratesBought = 0
 	data.tankMilk = 0
 	data.canMilk = 0
 	data.dairyQueue = 0
@@ -57,7 +58,19 @@ local function onRequest(player: Player)
 	data.upgrades = upgrades
 	data.rebirths += 1
 
-	for _, key in { "cows", "cowsBought", "tankMilk", "canMilk", "dairyQueue", "dairyCash", "upgrades", "rebirths" } do
+	for _, key in
+		{
+			"cows",
+			"cowsBought",
+			"cratesBought",
+			"tankMilk",
+			"canMilk",
+			"dairyQueue",
+			"dairyCash",
+			"upgrades",
+			"rebirths",
+		}
+	do
 		DataService:Replicate(player, key)
 	end
 	WalkSpeedService:Apply(player)

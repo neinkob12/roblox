@@ -42,6 +42,7 @@ local TEMPLATE = {
 	totalCashEarned = 0,
 	cows = startingCows(), -- { ["1"] = 3, ["2"] = 1, ... }
 	cowsBought = 0, -- this rebirth, drives buy price
+	cratesBought = 0, -- this rebirth, drives crate price (Economy.Crate.BuyPriceGrowth)
 	tankMilk = 0,
 	canMilk = 0,
 	dairyQueue = 0, -- milk deposited and waiting to be sold

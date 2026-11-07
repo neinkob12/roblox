@@ -25,7 +25,7 @@
 12. **Offline earnings:** the tank keeps filling at 50% efficiency for up to 8 hours, within capacity. A welcome-back popup shows on return.
 
 ## Cows (18 tiers): see `src/shared/Config/Cows.luau`
-Each tier makes 3.5x the milk of the previous one. Famous brainrot characters are cow-ified (Brr Brr Patamoo, Lirili Larilatte, Chimpanzini Muuanini, Ballerina Cappumoocina, Trippi Troppi Muuppi, Frigo Cammellatte, Glorbo Muuttodrillo, La Vacca Saturno Saturnita). **Banned:** Tung Tung Tung Sahur, Tralalero Tralala, Bombardiro Crocodilo.
+Each tier makes 3.5x the milk of the previous one. Famous brainrot characters are cow-ified (Brr Brr Patamoo, Lirili Larilatte, Chimpanzini Muuanini, Trippi Troppi Muuppi, Frigo Cammellatte, Glorbo Muuttodrillo, La Vacca Saturno Saturnita). **Banned:** Tung Tung Tung Sahur, Tralalero Tralala, Bombardiro Crocodilo, Ballerina Cappuccina (pending US + UK Class 9 trademark; tier 9 renamed to "Tiptoe Moochiato").
 Models are built from Parts (blocky style, matching the reference look). There are no meshes.
 
 ## Meta systems

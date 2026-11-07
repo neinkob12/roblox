@@ -22,7 +22,7 @@ This is a Roblox game (Luau, Rojo). Several Claude sessions on two accounts buil
 - Big numbers are shown via `Format.Number` / `Format.Cash`.
 - Mobile-first UI: minimum touch target 44px, use `UIScale` / `Scale` sizing, and test in Studio's device emulator (iPhone landscape).
 - No Toolbox/free models (backdoor risk). Build models from Parts in code. No external HTTP.
-- Brainrot names: never use Tung Tung Tung Sahur, Tralalero Tralala or Bombardiro Crocodilo.
+- Brainrot names: never use Tung Tung Tung Sahur, Tralalero Tralala, Bombardiro Crocodilo or Ballerina Cappuccina.
 
 ## Testing (you cannot run Studio)
 You can't run Roblox here, so be extra careful. Before pushing, reread each file for nil-access and typos. In your PR, write exact **Studio test steps** for the human ("Press Play, walk to BuyPad5, expect cash -X and 5 cows in Stall1").
