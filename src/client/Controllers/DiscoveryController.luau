@@ -139,17 +139,14 @@ local function buildGui(cow: Cows.CowTier)
 	local stopCow = CowViewport.Mount(vp, cow.tier, { spin = 1.3, bob = 0.2 })
 
 	-- banner
-	local banner = C.Label(
-		content,
-		{
-			name = "Banner",
-			text = "NEW COW!",
-			size = UDim2.fromScale(0.85, 0.16),
-			position = UDim2.fromScale(0.5, -0.2),
-			anchor = CENTER,
-			stroke = 5,
-		}
-	)
+	local banner = C.Label(content, {
+		name = "Banner",
+		text = "NEW COW!",
+		size = UDim2.fromScale(0.85, 0.16),
+		position = UDim2.fromScale(0.5, -0.2),
+		anchor = CENTER,
+		stroke = 5,
+	})
 	banner.TextColor3 = Color3.fromRGB(255, 225, 60)
 	banner.Rotation = -4
 	banner.ZIndex = 6
@@ -159,17 +156,14 @@ local function buildGui(cow: Cows.CowTier)
 	bannerGrad.Parent = banner
 
 	-- cow name
-	local name = C.Label(
-		content,
-		{
-			name = "CowName",
-			text = cow.name,
-			size = UDim2.fromScale(0.95, 0.14),
-			position = UDim2.fromScale(0.5, 0.82),
-			anchor = CENTER,
-			stroke = 5,
-		}
-	)
+	local name = C.Label(content, {
+		name = "CowName",
+		text = cow.name,
+		size = UDim2.fromScale(0.95, 0.14),
+		position = UDim2.fromScale(0.5, 0.82),
+		anchor = CENTER,
+		stroke = 5,
+	})
 	name.ZIndex = 6
 	name.TextTransparency = 1
 	local nameGrad = Instance.new("UIGradient")
@@ -180,32 +174,26 @@ local function buildGui(cow: Cows.CowTier)
 	nameScale.Scale = 2.5
 	nameScale.Parent = name
 
-	local sub = C.Label(
-		content,
-		{
-			name = "Tier",
-			text = `Tier {cow.tier} / {Cows.Count}  ·  {Format.Number(cow.milkPerSecond)} milk/s`,
-			size = UDim2.fromScale(0.7, 0.06),
-			position = UDim2.fromScale(0.5, 0.92),
-			anchor = CENTER,
-			stroke = 3,
-		}
-	)
+	local sub = C.Label(content, {
+		name = "Tier",
+		text = `Tier {cow.tier} / {Cows.Count}  ·  {Format.Number(cow.milkPerSecond)} milk/s`,
+		size = UDim2.fromScale(0.7, 0.06),
+		position = UDim2.fromScale(0.5, 0.92),
+		anchor = CENTER,
+		stroke = 3,
+	})
 	sub.ZIndex = 6
 	sub.TextTransparency = 1
 	sub.TextColor3 = Color3.fromRGB(255, 240, 200)
 
-	local hint = C.Label(
-		gui,
-		{
-			name = "Hint",
-			text = "Tap to continue",
-			size = UDim2.fromScale(0.4, 0.045),
-			position = UDim2.fromScale(0.5, 0.965),
-			anchor = CENTER,
-			stroke = 2,
-		}
-	)
+	local hint = C.Label(gui, {
+		name = "Hint",
+		text = "Tap to continue",
+		size = UDim2.fromScale(0.4, 0.045),
+		position = UDim2.fromScale(0.5, 0.965),
+		anchor = CENTER,
+		stroke = 2,
+	})
 	hint.ZIndex = 7
 	hint.TextTransparency = 1
 	hint.TextColor3 = Color3.fromRGB(220, 220, 230)

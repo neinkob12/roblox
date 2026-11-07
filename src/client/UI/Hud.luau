@@ -13,7 +13,6 @@ local UserInputService = game:GetService("UserInputService")
 
 local Format = require(ReplicatedStorage.Shared.Format)
 local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
-local Events = require(ReplicatedStorage.Shared.Config.Events)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Theme = require(script.Parent.Parent.Lib.Theme)
 local C = require(script.Parent.Parent.Lib.UiKit)
@@ -210,14 +209,6 @@ end
 ------------------------------------------------------------------------------ update
 
 -- "08:54" style countdown (Format.Time gives "8:54")
-local function mmss(seconds: number): string
-	local s = math.max(0, math.floor(seconds))
-	if s >= 3600 then
-		return Format.Time(s)
-	end
-	return string.format("%02d:%02d", s // 60, s % 60)
-end
-
 local function cashPopup(amount: number)
 	local pop = C.Label(root, {
 		name = "CashPopup",
@@ -365,20 +356,19 @@ local function updateTimers()
 	end
 
 	-- events
-	local id = workspace:GetAttribute("EventId")
-	local ev = if typeof(id) == "string" and id ~= "" then Events.ById[id] else nil
+	local ev = Multipliers.ActiveEvent()
 	if ev then
 		eventChip.Visible = true
 		eventChip.BackgroundColor3 = Colors.PinkDark
 		local ends = workspace:GetAttribute("EventEndsAt")
-		local left = if typeof(ends) == "number" then mmss(ends - now) else ""
+		local left = if typeof(ends) == "number" then Format.Time(ends - now) else ""
 		eventText.Text = `{ev.name} {left}`
 	else
 		local nextEv = workspace:GetAttribute("EventNextAt")
 		if typeof(nextEv) == "number" and nextEv > now then
 			eventChip.Visible = true
 			eventChip.BackgroundColor3 = Colors.Chip
-			eventText.Text = `Next event in {mmss(nextEv - now)}`
+			eventText.Text = `Next event in {Format.Time(nextEv - now)}`
 		else
 			eventChip.Visible = false
 		end
