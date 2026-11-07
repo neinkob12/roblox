@@ -554,7 +554,7 @@ function PetsPanel:Init()
 		text = "",
 		color = Colors.TextDark,
 		size = UDim2.new(1, -312, 0, 30),
-		position = UDim2.new(1, 0, 0, 0),
+		position = UDim2.fromScale(1, 0),
 		anchor = Vector2.new(1, 0),
 		align = Enum.TextXAlignment.Right,
 		stroke = 0,
