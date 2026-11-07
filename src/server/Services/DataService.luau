@@ -113,6 +113,7 @@ local function onPlayerAdded(player: Player)
 	if profile.Data.firstJoin == 0 then
 		profile.Data.firstJoin = os.time()
 		profile.Data.cows = DataService:NewStartingCows()
+		DataService:MarkStartingCowsDiscovered(profile.Data)
 		profile.Data.tankMilk = Economy.StartingTankMilk
 		profile.Data.crates = Economy.StartingCrates
 	end
@@ -219,6 +220,14 @@ end
 -- Starting herd for brand-new players, after a rebirth and after /reset.
 function DataService:NewStartingCows(): { [string]: number }
 	return startingCows()
+end
+
+-- The starting herd is already "known": without this the first buy fires a NEW COW reveal
+-- for a cow the player owns, and the Index shows it as "???".
+function DataService:MarkStartingCowsDiscovered(data: any)
+	for tier in Economy.StartingCows do
+		data.discovered[tostring(tier)] = true
+	end
 end
 
 function DataService:AddCash(player: Player, amount: number)
