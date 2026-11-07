@@ -21,9 +21,7 @@ local RunService = game:GetService("RunService")
 local TextChatService = game:GetService("TextChatService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Net = require(ReplicatedStorage.Shared.Net)
 local Format = require(ReplicatedStorage.Shared.Format)
-local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Cows = require(ReplicatedStorage.Shared.Config.Cows)
 local Events = require(ReplicatedStorage.Shared.Config.Events)
@@ -258,8 +256,6 @@ register("price", "/price x | off", function(player, args)
 	Notify.To(player, `[Admin] milk price = {x}x for {PRICE_LOCK_SECONDS // 60} min`, "success")
 end)
 
--- Same formula as ProductionService.applyOffline (keep in sync): milk into the tank at
--- Offline.Efficiency, capped by free tank space and Offline.MaxSeconds.
 register("offline", "/offline seconds", function(player, args)
 	local data = DataService:Get(player)
 	local seconds = parseNumber(args[1])
@@ -267,18 +263,11 @@ register("offline", "/offline seconds", function(player, args)
 		Notify.To(player, "Usage: /offline seconds  (e.g. 3600)", "error")
 		return
 	end
-	local elapsed = math.min(seconds, Economy.Offline.MaxSeconds)
-	local mps = Multipliers.MilkPerSecond(player, data)
-	local capacity = ProductionService:GetTankCapacity(player, data)
-	local current = data.tankMilk or 0
-	local milk = math.min(math.max(0, capacity - current), mps * elapsed * Economy.Offline.Efficiency)
+	local milk, elapsed = ProductionService:GrantOffline(player, data, seconds)
 	if milk <= 0 then
 		Notify.To(player, "[Admin] tank is already full, nothing to add", "info")
 		return
 	end
-	data.tankMilk = current + milk
-	DataService:Replicate(player, "tankMilk")
-	Net.Event("OfflineEarnings"):FireClient(player, milk, elapsed)
 	Notify.To(player, `[Admin] offline {Format.Time(elapsed)}: +{Format.Number(milk)} milk`, "success")
 end)
 

@@ -2,40 +2,31 @@
 -- Milk can: touch your own plot's TankTap to pour tank milk into the can you carry.
 -- Owner: A3.
 --
---   CanService:GetCanCapacity(player, data) -> number
+--   Capacity.CanCapacity(player, data) -> number
 --   CanService:FillCan(player) -> number      (milk moved; used by the tap and autoCollect)
 --
--- Player attribute set here: CanCapacity.
+-- Player attribute set here: CanCapacity (formula in shared/Capacity).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Safe = require(ReplicatedStorage.Shared.Safe)
 local Format = require(ReplicatedStorage.Shared.Format)
-local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
-local Economy = require(ReplicatedStorage.Shared.Config.Economy)
-local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
 local DataService = require(script.Parent.DataService)
 local ProductionService = require(script.Parent.ProductionService)
 local Notify = require(script.Parent.Parent.Util.Notify)
 local Debounce = require(script.Parent.Parent.Util.Debounce)
 local Pads = require(script.Parent.Parent.Util.Pads)
+local Capacity = require(ReplicatedStorage.Shared.Capacity)
 
 local CanService = {}
-
-function CanService:GetCanCapacity(player: Player, data: any): number
-	local mps = Multipliers.MilkPerSecond(player, data)
-	local lvl = (data.upgrades and data.upgrades.canSize) or 0
-	local base = math.max(Economy.Can.MinCapacity, mps * Economy.Can.BaseSeconds)
-	return base * (1 + lvl * Upgrades.ById.canSize.perLevel)
-end
 
 function CanService:FillCan(player: Player): number
 	local data = DataService:Get(player)
 	if not data then
 		return 0
 	end
-	local capacity = CanService:GetCanCapacity(player, data)
+	local capacity = Capacity.CanCapacity(player, data)
 	player:SetAttribute("CanCapacity", capacity)
 	local tank = data.tankMilk or 0
 	local can = data.canMilk or 0
@@ -67,7 +58,7 @@ end
 
 function CanService:Init()
 	DataService.PlayerLoaded:Connect(function(player: Player, data: any)
-		player:SetAttribute("CanCapacity", CanService:GetCanCapacity(player, data))
+		player:SetAttribute("CanCapacity", Capacity.CanCapacity(player, data))
 	end)
 end
 
@@ -83,14 +74,10 @@ function CanService:Start()
 			local data = DataService:Get(player)
 			if data then
 				Safe.Run("CanService tick", function()
-					player:SetAttribute("CanCapacity", CanService:GetCanCapacity(player, data))
+					player:SetAttribute("CanCapacity", Capacity.CanCapacity(player, data))
 					local lvl = (data.upgrades and data.upgrades.autoCollect) or 0
 					if lvl > 0 then
-						local interval = math.max(
-							Economy.Can.AutoCollectMinSeconds,
-							Economy.Can.AutoCollectBaseSeconds - lvl * Upgrades.ById.autoCollect.perLevel
-						)
-						if Debounce.Try(player, "autoCollect", interval) then
+						if Debounce.Try(player, "autoCollect", Capacity.AutoCollectInterval(lvl)) then
 							CanService:FillCan(player)
 						end
 					end

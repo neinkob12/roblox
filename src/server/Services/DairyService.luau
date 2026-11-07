@@ -2,11 +2,11 @@
 -- The Dairy: milk price board, milk truck, deposit pad (can -> queue), selling, cash pad.
 -- Owner: A3.
 --
---   DairyService:GetSellPerSecond(player, data) -> number
+--   Capacity.SellPerSecond(player, data) -> number
 --   DairyService:Deposit(player) -> number      (milk deposited; used by DepositPad and Auto Sell)
 --
 -- Workspace attributes set here: MilkPrice, MilkPriceNextAt, TruckActive, TruckLeavesAt, TruckNextAt.
--- Player attribute set here: SellPerSecond.
+-- Player attribute set here: SellPerSecond (formula in shared/Capacity).
 --
 -- The price is LOCKED at deposit time: data.dairyQueue holds milk VALUE (milk * price incl. truck),
 -- not raw milk. The queue drains at SellPerSecond value units/sec, times Multipliers.Cash, into
@@ -20,11 +20,11 @@ local Safe = require(ReplicatedStorage.Shared.Safe)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
-local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
 local DataService = require(script.Parent.DataService)
 local Notify = require(script.Parent.Parent.Util.Notify)
 local Debounce = require(script.Parent.Parent.Util.Debounce)
 local Pads = require(script.Parent.Parent.Util.Pads)
+local Capacity = require(ReplicatedStorage.Shared.Capacity)
 
 local DairyService = {}
 
@@ -38,13 +38,6 @@ local COLOR_DOWN = Color3.fromRGB(235, 70, 60)
 local COLOR_FLAT = Color3.fromRGB(255, 255, 255)
 
 ----------------------------------------------------------------------------- selling
-
-function DairyService:GetSellPerSecond(player: Player, data: any): number
-	local mps = Multipliers.MilkPerSecond(player, data)
-	local lvl = (data.upgrades and data.upgrades.sellSpeed) or 0
-	local rate = mps * Economy.Dairy.BaseSellFactor * (1 + lvl * Upgrades.ById.sellSpeed.perLevel)
-	return math.max(Economy.Dairy.MinSellPerSecond, rate)
-end
 
 function DairyService:Deposit(player: Player): number
 	local data = DataService:Get(player)
@@ -69,7 +62,7 @@ local function sellTick(dt: number)
 	for _, player in Players:GetPlayers() do
 		local data = DataService:Get(player)
 		if data then
-			local rate = DairyService:GetSellPerSecond(player, data)
+			local rate = Capacity.SellPerSecond(player, data)
 			player:SetAttribute("SellPerSecond", rate)
 			local queue = data.dairyQueue or 0
 			if queue > 0 then

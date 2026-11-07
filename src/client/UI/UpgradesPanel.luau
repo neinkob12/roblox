@@ -8,10 +8,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Net = require(ReplicatedStorage.Shared.Net)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
-local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Theme = require(script.Parent.Theme)
 local C = require(script.Parent.Components)
 local DataController = require(script.Parent.Parent.Controllers.DataController)
+local Capacity = require(ReplicatedStorage.Shared.Capacity)
 
 local Colors = Theme.Colors
 
@@ -28,7 +28,7 @@ local function effectText(u: Upgrades.Upgrade, level: number): string
 		if level <= 0 then
 			return "Off"
 		end
-		local secs = math.max(Economy.Can.AutoCollectMinSeconds, Economy.Can.AutoCollectBaseSeconds - level)
+		local secs = Capacity.AutoCollectInterval(level)
 		return `Fills can every {secs}s`
 	end
 	return `+{Format.Number(level * u.perLevel * 100)}%`
