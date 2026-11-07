@@ -149,8 +149,17 @@ function DataService:Init()
 end
 
 function DataService:Start()
+	-- One waiting thread per player: while a call is already waiting for the profile, extra calls
+	-- return nil right away (the client also gets DataInit), so spamming GetData can't pile up threads.
+	local waiting: { [Player]: boolean } = {}
 	Net.Function("GetData").OnServerInvoke = function(player: Player)
-		local data = DataService:WaitFor(player)
+		local data = DataService:Get(player)
+		if data or waiting[player] then
+			return data
+		end
+		waiting[player] = true
+		data = DataService:WaitFor(player)
+		waiting[player] = nil
 		return data
 	end
 	for _, p in Players:GetPlayers() do

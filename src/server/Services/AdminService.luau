@@ -4,11 +4,11 @@
 --
 --   /cash N          set cash to N (supports 1e9, 2.5M, 3b ...). "/cash +N" adds N instead.
 --   /cows tier n     give n cows of a tier (default n = 1)
---   /rebirths n      set the rebirth count
+--   /rebirths n      set the rebirth count (max 1000)
 --   /crate n         give n unopened Mystery Milk Crates (default 1)
 --   /reset           wipe your data back to a brand new player
 --   /event id        start a timed event (DoublePrice, MilkFlood, GoldenRush, CrateRain); "/event off" ends it
---   /price x         lock the milk price to x for 5 minutes; "/price off" re-rolls it
+--   /price x         lock the milk price to x (0.1 to 10) for 5 minutes; "/price off" re-rolls it
 --   /offline seconds simulate offline earnings as if you were away that long (popup included)
 --   /truck           call the milk truck now (it arrives on the next DairyService tick)
 --   /admin           list the commands
@@ -33,6 +33,8 @@ local Rewards = require(script.Parent.Parent.Util.Rewards)
 
 local PRICE_LOCK_SECONDS = 5 * 60
 local MAX_GIVE = 1e6 -- cows / crates per command, keeps typos from freezing anything
+local MAX_REBIRTHS = 1000 -- rebirth cost grows exponentially; more would overflow the price math
+local MIN_PRICE, MAX_PRICE = 0.1, 10
 
 local AdminService = {}
 
@@ -154,10 +156,10 @@ register("rebirths", "/rebirths n", function(player, args)
 	local data = DataService:Get(player)
 	local n = parseNumber(args[1])
 	if not data or not n or n < 0 then
-		Notify.To(player, "Usage: /rebirths n", "error")
+		Notify.To(player, `Usage: /rebirths n  (0-{MAX_REBIRTHS})`, "error")
 		return
 	end
-	data.rebirths = math.floor(n)
+	data.rebirths = math.min(math.floor(n), MAX_REBIRTHS)
 	DataService:Replicate(player, "rebirths")
 	local mult = 1 + Economy.Rebirth.CashMultiplierPerRebirth * data.rebirths
 	Notify.To(player, `[Admin] rebirths = {data.rebirths} (cash x{Format.Number(mult)})`, "success")
@@ -250,6 +252,7 @@ register("price", "/price x | off", function(player, args)
 		Notify.To(player, "Usage: /price x  (e.g. 1.5)", "error")
 		return
 	end
+	x = math.clamp(x, MIN_PRICE, MAX_PRICE)
 	workspace:SetAttribute("MilkPrice", x)
 	workspace:SetAttribute("MilkPriceNextAt", os.time() + PRICE_LOCK_SECONDS)
 	Notify.To(player, `[Admin] milk price = {x}x for {PRICE_LOCK_SECONDS // 60} min`, "success")
