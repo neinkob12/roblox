@@ -25,7 +25,6 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local CowModels = require(ReplicatedStorage.Shared.CowModels)
 local Theme = require(script.Parent.Parent.Lib.Theme)
 local DataController = require(script.Parent.DataController)
-local Safe = require(ReplicatedStorage.Shared.Safe)
 
 local player = Players.LocalPlayer
 
