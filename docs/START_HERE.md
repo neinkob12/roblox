@@ -16,6 +16,12 @@ The game is built. These are the steps only you can do, in order. Each one links
 - Guide: [QA_CHECKLIST.md](QA_CHECKLIST.md). It takes 15 minutes and covers every pad, saving, purchases, 2 players and mobile.
 - **Fast testing (admin chat commands, Studio only):** `/cash 1e9`, `/cows 10 3`, `/crate 5`, `/rebirths 2`, `/event MilkFlood`, `/price 1.5`, `/truck`, `/offline 3600`, `/reset`, `/admin` (lists all of them).
 - **Codes to try in Settings:** `MOOO`, `BRAINROT`, `RELEASE`.
+- **Pets and eggs:**
+  1. Open the Egg Shop at the EggStand on the dairy plaza. Claim the free egg, then press **Odds** to see the chances.
+  2. Wait 60s and tap the nest on your plot to hatch the egg.
+  3. Open the Pets menu to equip your pet. It should follow you, and your milk/s should go up.
+  - `/rebirths 3` unlocks more nests and pet slots. `/cash 1e9` lets you buy eggs.
+- **Daily reward:** the Daily button in the menu.
 - **Phone view:** Test tab > Device > iPhone, landscape.
 - **Send Claude:** screenshots of anything red in Output, plus anything that looks off. This is the most valuable thing you can do. The game has passed type checks and a headless boot test, but nobody has played it in real Roblox yet.
 
