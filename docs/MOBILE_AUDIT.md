@@ -24,7 +24,7 @@ Every module in `src/client/UI/` was checked against the CLAUDE.md mobile rules.
 | # | Area | Finding | Fix |
 |---|---|---|---|
 | 1 | `Theme.MinTouch` | 56 ref px. The comment assumed scale 0.79, but iPhone SE is 0.741, so buttons were 41.5 px, below 44. | Raised to **64** (at least 44.8 px even at the 0.7 floor). |
-| 2 | Settings rows | The toggle rows were 62 px apart, which would overlap 64 px buttons. | Rows are now `MinTouch + 6` apart and the panel is 370 tall. |
+| 2 | Settings rows | The toggle rows were 62 px apart, which would overlap 64 px buttons. | Rows are now `MinTouch + 2` apart (4 rows with Reduce motion) and the panel is 410 tall. |
 | 3 | Shop cards | 70 px card for a 64 px button. | Card is 74 px. |
 | 4 | Upgrades and Quests cards | 72 and 76 px cards for 64 px buttons. | Fits, no change. |
 | 5 | Side menu | 2x3 grid centered at 42% height. Adding Index makes 4 rows (280 ref px). Centered, that would reach about y=320 ref on the SE, and the jump button starts around y=306. | The grid is now **anchored top-right** (y 10 to 290). It clears the jump button on the SE (jump top at about y 306) and on small Android (about y 298). The one exception is the 568x320 worst case, where the bottom row's corner touches the jump button by about 20x40 ref px. |
@@ -40,7 +40,7 @@ Every module in `src/client/UI/` was checked against the CLAUDE.md mobile rules.
 
 ## Reduce motion
 
-The lead's SettingsService (#28) accepts `reduceMotion`, so C6 added a **Reduce motion** toggle (default off) to Settings. The panel is now 410 tall, and it fits the SE without shrinking. When it is on:
+The lead's SettingsService (#28) accepts `reduceMotion`, so C6 added a **Reduce motion** toggle (default off) to Settings. The panel is now 410 tall. On the SE, fix 6 shrinks it by about 1.5%, and its buttons are still about 46.7 px. When it is on:
 
 - Panels open instantly, with no bounce.
 - Rainbow strokes stop spinning.
