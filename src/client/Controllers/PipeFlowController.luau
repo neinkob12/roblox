@@ -240,7 +240,7 @@ function PipeFlowController:Start()
 	task.spawn(setPlot, player:GetAttribute("PlotId"))
 
 	-- smooth tank fill
-	RunService.RenderStepped:Connect(function(dt)
+	RunService.RenderStepped:Connect(function(dt: number)
 		if not fillInfo then
 			return
 		end

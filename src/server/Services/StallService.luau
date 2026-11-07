@@ -106,7 +106,7 @@ local function syncPlot(plot: Instance)
 	local owner = if type(ownerId) == "number" and ownerId ~= 0 then Players:GetPlayerByUserId(ownerId) else nil
 	local data = owner and DataService:Get(owner)
 
-	local ps = plotStates[plot]
+	local ps: PlotState? = plotStates[plot]
 	if ps and ps.ownerId ~= ownerId then
 		clearPlot(plot)
 		ps = nil
@@ -186,7 +186,7 @@ function StallService:Start()
 	while true do
 		task.wait(POLL_SECONDS)
 		for _, plot in plots:GetChildren() do
-			local ok, err = pcall(syncPlot, plot)
+			local ok, err = pcall(syncPlot :: any, plot)
 			if not ok then
 				warn(`[StallService] {plot.Name}: {err}`)
 			end

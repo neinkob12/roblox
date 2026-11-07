@@ -287,7 +287,7 @@ local function pump()
 		while #spinQueue > 0 do
 			local item = table.remove(spinQueue, 1)
 			if item then
-				local ok, err = pcall(playSpin, item.tier, item.source)
+				local ok, err = pcall(playSpin :: any, item.tier, item.source)
 				if not ok then
 					warn(`[CratesPanel] spin failed: {err}`)
 				end
