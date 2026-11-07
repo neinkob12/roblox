@@ -37,6 +37,7 @@ Every module in `src/client/UI/` was checked against the CLAUDE.md mobile rules.
 | 12 | Close buttons | Every panel gets a 64 px red X from `Components.Panel`, and tapping the dim background also closes it. The crate spin and the welcome back popup have big tap targets. | Covered by fix 1. |
 | 13 | Text scaling | All labels use `TextScaled` inside fixed ref px boxes, so text scales with the `UIScale`. The smallest are the side-button names (19 ref px, about 14 px on the SE) and boost rows (22 ref px). | OK. |
 | 14 | Crate spin window | 640 ref px wide, and the root is at least 811 wide. | Fits. |
+| 15 | Side menu, 9 buttons (wave 5: F2 Pets + E1 Daily) | 2 columns would be 5 rows (y 10 to 362 ref), well into the jump button (top about y 306 on the SE). Smaller buttons would drop below 44 px. | The grid is now **3 columns x 3 rows** (`Theme.MenuColumns = 3`, y 10 to 218, x 682 to 890 ref), so it also clears the 568x320 worst case from #5. `Theme.MenuReserve` went from 160 to 230, so panels center in the 670 ref px left of it. The 700 px Pets/Egg Shop panels scale to about 0.93, still 44 px+ targets. TopStack (x 240 to 660) stays clear. A 10th button would add a 4th row (y 290), which still fits. |
 
 ## Review round 2 (lead's client review)
 
