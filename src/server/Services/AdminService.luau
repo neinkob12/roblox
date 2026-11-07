@@ -190,6 +190,7 @@ register("reset", "/reset  (wipe your data)", function(player, _args)
 		data[key] = deepCopy(value)
 	end
 	data.cows = DataService:NewStartingCows()
+	DataService:MarkStartingCowsDiscovered(data)
 	data.purchases = purchases or {}
 	data.firstJoin = os.time()
 	data.lastOnline = os.time()
