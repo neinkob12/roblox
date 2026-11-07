@@ -20,7 +20,6 @@ local TweenService = game:GetService("TweenService")
 local Safe = require(ReplicatedStorage.Shared.Safe)
 local Net = require(ReplicatedStorage.Shared.Net)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
-local Events = require(ReplicatedStorage.Shared.Config.Events)
 local Cows = require(ReplicatedStorage.Shared.Config.Cows)
 local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
@@ -30,6 +29,7 @@ local Notify = require(script.Parent.Parent.Util.Notify)
 local Debounce = require(script.Parent.Parent.Util.Debounce)
 local PlotService = require(script.Parent.PlotService)
 local Pads = require(script.Parent.Parent.Util.Pads)
+local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
 
 local CrateConfig = Economy.Crate
 local CRATE_COLOR = Color3.fromRGB(255, 200, 60)
@@ -224,20 +224,11 @@ local function spawnCrate(player: Player): boolean
 	return true
 end
 
-local function dropMultiplier(): number
-	local id = workspace:GetAttribute("EventId")
-	if typeof(id) == "string" and id ~= "" then
-		local ev: any = Events.ById[id]
-		if ev and typeof(ev.crateDropMultiplier) == "number" then
-			return ev.crateDropMultiplier
-		end
-	end
-	return 1
-end
-
 local function rollDrops()
 	local minutes = CrateConfig.DropCheckSeconds / 60
-	local perCow = math.min(1, CrateConfig.DropChancePerCowPerMinute * minutes * dropMultiplier())
+	local ev = Multipliers.ActiveEvent()
+	local eventMult = if ev and typeof(ev.crateDropMultiplier) == "number" then ev.crateDropMultiplier else 1
+	local perCow = math.min(1, CrateConfig.DropChancePerCowPerMinute * minutes * eventMult)
 	for _, player in Players:GetPlayers() do
 		local data = DataService:Get(player)
 		if data then

@@ -11,7 +11,7 @@
 -- Effects are applied by their readers: Multipliers (cash/production), ProductionService
 -- (rareChanceMultiplier), CrateService (crateDropMultiplier).
 --
---   EventService:GetActive() -> event def | nil
+--   The running event is read with Multipliers.ActiveEvent() (server and client).
 --
 -- STUDIO TESTING: Config/Events.DebugFastInStudio = true (events every 30s, 20s long).
 
@@ -28,14 +28,6 @@ local FAST = Events.DebugFastInStudio and RunService:IsStudio()
 local GAP = if FAST then Events.DebugEverySeconds else Events.EverySeconds
 
 local lastId: string? = nil
-
-function EventService:GetActive(): any
-	local id = workspace:GetAttribute("EventId")
-	if typeof(id) == "string" and id ~= "" then
-		return Events.ById[id]
-	end
-	return nil
-end
 
 local function pickEvent(): any
 	local choices = {}

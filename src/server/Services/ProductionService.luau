@@ -16,7 +16,6 @@ local Net = require(ReplicatedStorage.Shared.Net)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
-local Events = require(ReplicatedStorage.Shared.Config.Events)
 local DataService = require(script.Parent.DataService)
 local Notify = require(script.Parent.Parent.Util.Notify)
 local Capacity = require(ReplicatedStorage.Shared.Capacity)
@@ -30,20 +29,10 @@ function ProductionService:MarkTankDirty(player: Player)
 	dirty[player] = true
 end
 
-local function rareChanceMultiplier(): number
-	local id = workspace:GetAttribute("EventId")
-	if typeof(id) == "string" and id ~= "" then
-		local ev: any = Events.ById[id]
-		if ev and ev.rareChanceMultiplier then
-			return ev.rareChanceMultiplier
-		end
-	end
-	return 1
-end
-
 -- Returns the rare milk entry rolled this tick, or nil. Rarest is checked first.
 local function rollRare(): any
-	local mult = rareChanceMultiplier()
+	local ev = Multipliers.ActiveEvent()
+	local mult = if ev and ev.rareChanceMultiplier then ev.rareChanceMultiplier else 1
 	local list = table.clone(Economy.RareMilk)
 	table.sort(list, function(a, b)
 		return a.chance < b.chance

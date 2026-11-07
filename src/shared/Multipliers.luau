@@ -14,7 +14,8 @@ local Events = require(script.Parent.Config.Events)
 
 local Multipliers = {}
 
-local function activeEvent(): any
+-- The running server event (Config/Events entry) or nil. The ONE event lookup, server and client.
+function Multipliers.ActiveEvent(): any
 	local id = workspace:GetAttribute("EventId")
 	if typeof(id) == "string" and id ~= "" then
 		return Events.ById[id]
@@ -44,7 +45,7 @@ function Multipliers.Cash(player: Player, data: any): number
 	if typeof(friends) == "number" then
 		m *= 1 + math.min(Economy.FriendBoost.Max, friends * Economy.FriendBoost.PerFriend)
 	end
-	local ev = activeEvent()
+	local ev = Multipliers.ActiveEvent()
 	if ev and ev.cashMultiplier then
 		m *= ev.cashMultiplier
 	end
@@ -54,7 +55,7 @@ end
 function Multipliers.Production(_player: Player, data: any): number
 	local lvl = (data.upgrades and data.upgrades.pipeSpeed) or 0
 	local m = 1 + lvl * Upgrades.ById.pipeSpeed.perLevel
-	local ev = activeEvent()
+	local ev = Multipliers.ActiveEvent()
 	if ev and ev.productionMultiplier then
 		m *= ev.productionMultiplier
 	end
