@@ -4,6 +4,8 @@
 --     (max 1 drop per player per roll, x crateDropMultiplier during the CrateRain event).
 --     A glowing "?" crate appears at the plot's CrateSpawn; the owner touches it -> data.crates += 1.
 --   * RequestBuyCrate: price = max(BuyBasePrice, milk/sec * BuyPriceSecondsOfProduction).
+--     G0: refused for players in a paid-random-items restricted region (ComplianceService), because
+--     cash can be bought with Robux. Opening crates they already own stays allowed.
 --   * RequestOpenCrate: rolls Economy.Crate.Odds relative to the best owned tier.
 --
 --   CrateService:GiveCrate(player, premium) -> number?
@@ -20,16 +22,17 @@ local TweenService = game:GetService("TweenService")
 local Safe = require(ReplicatedStorage.Shared.Safe)
 local Net = require(ReplicatedStorage.Shared.Net)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
-local Cows = require(ReplicatedStorage.Shared.Config.Cows)
 local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
 local Pricing = require(ReplicatedStorage.Shared.Pricing)
+local Odds = require(ReplicatedStorage.Shared.Odds)
 local Notify = require(script.Parent.Parent.Util.Notify)
 local Debounce = require(script.Parent.Parent.Util.Debounce)
 local PlotService = require(script.Parent.PlotService)
 local Pads = require(script.Parent.Parent.Util.Pads)
 local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
 local Rewards = require(script.Parent.Parent.Util.Rewards)
+local ComplianceService = require(script.Parent.ComplianceService)
 
 local CrateConfig = Economy.Crate
 local CRATE_COLOR = Color3.fromRGB(255, 200, 60)
@@ -45,22 +48,8 @@ function CrateService:BuyPrice(player: Player): number
 end
 
 function CrateService:Roll(bestTier: number, shift: number): number
-	local totalWeight = 0
-	for _, o in CrateConfig.Odds do
-		totalWeight += o.weight
-	end
-	local pick = rng:NextNumber() * totalWeight
-	local offset = CrateConfig.Odds[#CrateConfig.Odds].offset
-	for _, o in CrateConfig.Odds do
-		pick -= o.weight
-		if pick <= 0 then
-			offset = o.offset
-			break
-		end
-	end
-	local maxTier = math.min(CrateConfig.MaxTier or Cows.Count, Cows.Count)
-	-- never roll above MaxTier, but never below what the best-tier offset would give a low player
-	return math.clamp(bestTier + offset + shift, 1, math.max(maxTier, math.min(bestTier, Cows.Count)))
+	-- same outcome table the Crates panel shows (shared/Odds), so displayed odds == real odds
+	return Odds.Roll(Odds.Crate(bestTier, shift), rng)
 end
 
 -- highest tier with count > 0 (1 if none)
@@ -118,6 +107,14 @@ local function onBuy(player: Player)
 		return
 	end
 	if not DataService:Get(player) then
+		return
+	end
+	if ComplianceService:IsPaidRandomRestricted(player) then
+		Notify.To(
+			player,
+			"Buying crates is not available in your region. Earn them from drops, quests and codes!",
+			"error"
+		)
 		return
 	end
 	local price = CrateService:BuyPrice(player)

@@ -25,6 +25,13 @@ local EVENTS = {
 	"RequestBuyCrate", -- ()
 	"RequestClaimQuest", -- (questId: string)
 	"RequestSetting", -- (name: string, value: boolean)
+	-- wave 5 pets / eggs / nests (F1 server, F2 client; see docs/CONTRACTS.md section 11)
+	"RequestBuyEgg", -- (eggId: string) cash purchase, goes into the first free nest; gated by PaidRandomRestricted
+	"RequestClaimFreeEgg", -- () free Pasture egg every Eggs.FreeEggSeconds (earnable path, never gated)
+	"RequestHatch", -- (nestKey: string) hatch a ready egg in that nest
+	"RequestEquipPet", -- (petUid: string, equip: boolean)
+	"RequestMergePets", -- (petId: string, variant: string) 5 same -> next variant
+	"PetHatched", -- server -> client (petUid: string, petId: string, variant: string) for the reveal
 	"RequestTutorialStep", -- (step: number) C4 TutorialService validates (only forward, max +1)
 	"RequestDailyClaim", -- () E1 DailyService: claim today's login reward (20h cooldown, 48h streak reset)
 	"RequestIndexClaim", -- (count: number) E1 IndexRewardService: claim the Index milestone at `count` cows discovered

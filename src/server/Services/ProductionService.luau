@@ -2,8 +2,8 @@
 -- Milk production: cows -> pipes -> tank. Server tick every Economy.Tank.TickSeconds.
 -- Owner: A3.
 --
---   ProductionService:GetMilkPerSecond(player, data) -> number
---   Capacity.TankCapacity(player, data)  -> number
+--   ProductionService:GrantOffline(player, data, seconds)   (join bonus and admin /offline)
+--   Milk/sec: Multipliers.MilkPerSecond(player, data). Capacity: shared/Capacity.TankCapacity(player, data)
 --   ProductionService:MarkTankDirty(player)            (replicate tankMilk on the next flush, max every 0.5s)
 --
 -- Player attributes set here: MilkPerSecond, TankCapacity (formulas in shared/Capacity).
