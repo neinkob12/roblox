@@ -78,7 +78,7 @@ local function renderOdds()
 	end
 	local l = luck()
 	oddsTitle.Text = `{if egg then egg.name else "Egg"} odds`
-		.. (if l > 0 then ` (with your +{PetViewport.Percent(l)} luck)` else " (luck +0%)")
+		.. (if l > 0 then ` (with your +{PetViewport.Percent(l)} Egg Luck)` else " (Egg Luck +0%)")
 	local outcomes = Odds.Egg(eggId, l)
 	-- rarest last, like the server table; show rarity groups in order
 	table.sort(outcomes, function(a, b)

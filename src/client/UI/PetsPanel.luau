@@ -180,7 +180,7 @@ local function refreshHeader()
 	end
 	local index = (if d then Multipliers.PetIndexMilk(d) else 1) - 1
 	boostLabel.Text =
-		`Milk +{pct("milk")}  Cash +{pct("cash")}  Speed +{pct("speed")}  Luck +{pct("luck")}  Index +{PetViewport.Percent(
+		`Milk +{pct("milk")}  Cash +{pct("cash")}  Speed +{pct("speed")}  Egg Luck +{pct("luck")}  Index +{PetViewport.Percent(
 			index
 		)} milk`
 end

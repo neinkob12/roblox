@@ -20,9 +20,9 @@ export type Options = { spin: number?, silhouette: boolean? }
 
 local PetViewport = {}
 
-local KIND_NAMES: { [string]: string } = { milk = "Milk", cash = "Cash", speed = "Speed", luck = "Luck" }
+local KIND_NAMES: { [string]: string } = { milk = "Milk", cash = "Cash", speed = "Speed", luck = "Egg Luck" }
 
--- "+5% Milk", "+12.5% Luck" (the policy wants luck effects stated as a number)
+-- "+5% Milk", "+12.5% Egg Luck" (the policy wants luck effects stated as a number)
 function PetViewport.Percent(value: number): string
 	local p = math.floor(value * 1000 + 0.5) / 10
 	if p == math.floor(p) then
