@@ -59,6 +59,13 @@ Fx.Text = {
 	StrokeColor = Color3.fromRGB(30, 20, 10),
 }
 
+-- data.settings.reduceMotion: shake, screen glow, merge flash and cow pop are skipped, and
+-- these keep the rest calm (no spin or wide arcs, no bounce or overshoot)
+Fx.Calm = {
+	CoinArcScale = 0.25,
+	DropHeight = 3,
+}
+
 -- Rare milk screen-edge glow + camera shake
 export type RareStyle = { color: Color3, shake: number, label: string }
 
