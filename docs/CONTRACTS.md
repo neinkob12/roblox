@@ -117,3 +117,18 @@ These are binding for the B packages:
   - `HerdUtil.GiveCow(player, tier, n)`
 - **Player attributes for UI:** `MilkPerSecond`, `TankCapacity`, `CanCapacity`, `SellPerSecond`, `PlotId`.
 - **Economy tuning keys added:** `AutoMergeSeconds`, `Tank.TickSeconds/ReplicateSeconds`, `Can.AutoCollect*`, `Dairy.TickSeconds/AutoSellSeconds`, `Truck.DriveSeconds/DriveDistance`, `Crate.DropCheckSeconds/MaxWorldCrates/PremiumOddsShift`.
+
+## 9. Wave 2 (polish & hardening) ownership
+
+All of wave 1 is merged. Wave 2 packages work in parallel:
+
+| Package | Owns | May also touch |
+|---|---|---|
+| **C1 Type check** | `.github/workflows/ci.yml` (adding the luau-lsp step), `.luaurc`, `tools/typecheck.sh` | **Any existing `src/` file, for type and bug fixes only** (no behavior changes beyond fixing real bugs). Keep each fix minimal so other packages merge cleanly. |
+| **C2 Headless boot test** | `tests/**`, a CI step (coordinate with C1: add your own separate job `boot-test` in ci.yml) | Nothing in `src/`. File every bug you find as a GitHub issue labeled `bug` with the failing trace. The lead routes the fixes. |
+| **C3 Sound** | `src/shared/Config/Sounds.luau`, `src/client/Controllers/SoundController.luau`, `sound/**`, `docs/SOUND_UPLOAD.md` | Read `data.settings` (`music`, `sfx`, `voice`). Hook remotes and attributes client-side only. |
+| **C4 Tutorial** | `src/shared/Config/Tutorial.luau`, `src/server/Services/TutorialService.luau`, `src/client/Controllers/TutorialController.luau` | Uses `data.tutorialStep` and the `RequestTutorialStep` remote (both already exist). |
+| **C5 Juice** | `src/client/Controllers/FxController.luau`, `src/shared/Fx.luau` | You may add **single-line** `Net.Event("Fx"):FireClient(player, kind, payload)` calls inside existing services (Dairy cash collect, Merge, Buy, rare milk, crate pickup). Nothing else in those files. |
+| **C6 Polish & mobile** | New files under `src/client/UI/` (e.g. `IndexPanel.luau`, `HudPolish`), `docs/MOBILE_AUDIT.md` | Small layout or scale fixes in existing `src/client/UI/*` files. Coordinate with C1 by keeping the diffs small. |
+
+**Rule for everyone:** rebase or merge `origin/main` before marking your PR ready. C1 merges first when it can, so fix any conflicts on your side.
