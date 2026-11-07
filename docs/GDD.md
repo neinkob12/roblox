@@ -36,6 +36,30 @@ Models are built from Parts (blocky style, matching the reference look). There a
 - **Friend boost:** +10% cash per friend in the server, capped at +50%.
 - **No obby.**
 
+## Pets, eggs and nests (wave 5; see `Config/Pets.luau`, `Config/Eggs.luau`)
+- **Pets:** 15 original brainrot pets in 5 rarities, from Common +5% to Legendary +80%.
+  - Each pet boosts one stat: milk, cash, walk speed or **Egg Luck**. Egg Luck only affects eggs.
+  - Pets follow the player, and everyone can see them.
+  - Equip slots: 3 to start, 4 at Rebirth 2, 5 at Rebirth 4. Inventory holds 50.
+  - Caps: milk and cash +300% each, speed +30%, Egg Luck +100%.
+- **Variants:** 5 identical pets merge into 1 Golden (x2.5), and 5 Golden into 1 Rainbow (x6). Merging always works and nothing is lost.
+- **Eggs and nests:**
+  - Eggs are bought at the EggStand on the dairy plaza. They hatch in plot nests: 2 nests to start, 3 at Rebirth 1, 4 at Rebirth 3.
+  - Pasture egg: 60s. Dairy egg: 5 min. Cosmic Cream egg: 15 min, needs Rebirth 2.
+  - Eggs keep hatching while the player is offline.
+  - A free Pasture egg every 10 minutes.
+- **Pet index:** 45 entries. Every 5 discovered gives a permanent +2% milk.
+- **Rebirth keeps** pets, the pet index and nests.
+
+## Retention (wave 4)
+- **Daily login rewards:** a 7-day cycle. A claim opens every 20 hours, and the streak resets after 48 hours.
+- **Index milestones:** rewards at 3, 6, 9, 12, 15 and 18 cows discovered.
+
+## Paid random items (Roblox policy; `docs/CONTRACTS.md` section 11)
+- Cash packs and the Premium Crate stay for sale, so crates and eggs bought with cash count as indirect paid random items.
+- Every one of them shows its full odds behind a text **Odds** button before buying. The odds come from `shared/Odds`, which is exactly what the server rolls with, and they include Egg Luck.
+- Players where `PolicyService` restricts paid random items can't buy crates or eggs, and they don't see the Premium Crate. Free paths still work for them: drops, quests, codes, daily rewards, Index rewards and the free egg.
+
 ## Monetization (see `Config/Products.luau`)
 - **Gamepasses:**
   - 2x Cash forever
