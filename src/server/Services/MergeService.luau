@@ -9,6 +9,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Safe = require(ReplicatedStorage.Shared.Safe)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Cows = require(ReplicatedStorage.Shared.Config.Cows)
 local DataService = require(script.Parent.DataService)
@@ -98,15 +99,12 @@ function MergeService:Start()
 		elapsed += 1
 		local autoTick = elapsed % Economy.AutoMergeSeconds == 0
 		for _, player in Players:GetPlayers() do
-			local ok, err = pcall(function()
+			Safe.Run("MergeService tick", function()
 				if autoTick and player:GetAttribute("Pass_AutoMerge") == true then
 					MergeService:MergeAll(player, true)
 				end
 				refreshLabel(player)
 			end)
-			if not ok then
-				warn(`[MergeService] tick failed for {player.Name}: {err}`)
-			end
 		end
 	end
 end

@@ -8,6 +8,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Safe = require(ReplicatedStorage.Shared.Safe)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
@@ -66,10 +67,7 @@ function BuyService:Start()
 	-- live prices (cash changes constantly, so a cheap poll is simplest)
 	while true do
 		for _, player in Players:GetPlayers() do
-			local ok, err = (pcall :: any)(BuyService.RefreshLabels, BuyService, player)
-			if not ok then
-				warn(`[BuyService] label refresh failed for {player.Name}: {err}`)
-			end
+			Safe.Run("BuyService labels", BuyService.RefreshLabels, BuyService, player)
 		end
 		task.wait(1)
 	end

@@ -16,6 +16,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
+local Safe = require(ReplicatedStorage.Shared.Safe)
 local Net = require(ReplicatedStorage.Shared.Net)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
@@ -402,33 +403,21 @@ function DairyService:Start()
 	task.spawn(function()
 		while true do
 			-- each step is protected: one error must never stop prices, the truck or Auto Sell server-wide
-			local ok, err = pcall(function()
+			Safe.Run("DairyService price roll", function()
 				local nextAt = workspace:GetAttribute("MilkPriceNextAt")
 				if typeof(nextAt) ~= "number" or os.time() >= nextAt then
 					rollPrice()
 				end
 			end)
-			if not ok then
-				warn(`[DairyService] price roll failed: {err}`)
-			end
-			ok, err = pcall(truckTick)
-			if not ok then
-				warn(`[DairyService] truck tick failed: {err}`)
-			end
-			ok, err = pcall(updateBoard)
-			if not ok then
-				warn(`[DairyService] board update failed: {err}`)
-			end
+			Safe.Run("DairyService truck", truckTick)
+			Safe.Run("DairyService board", updateBoard)
 			-- Auto Sell gamepass: deposit the can remotely
 			local now = os.clock()
 			for _, player in Players:GetPlayers() do
 				if player:GetAttribute("Pass_AutoSell") then
 					if not lastAutoSell[player] or now - lastAutoSell[player] >= Economy.Dairy.AutoSellSeconds then
 						lastAutoSell[player] = now
-						local sold, sellErr = pcall(DairyService.Deposit, DairyService, player)
-						if not sold then
-							warn(`[DairyService] auto sell failed for {player.Name}: {sellErr}`)
-						end
+						Safe.Run("DairyService auto sell", DairyService.Deposit, DairyService, player)
 					end
 				end
 			end
