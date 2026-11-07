@@ -41,6 +41,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+sys.dont_write_bytecode = True  # keep tools/ free of __pycache__
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from luau_config import load_all  # noqa: E402
 
