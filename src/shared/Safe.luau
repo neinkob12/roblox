@@ -11,7 +11,8 @@ function Safe.Run(label: string, fn: (...any) -> ...any, ...: any): boolean
 	-- the cast keeps luau-lsp happy for functions that return nothing
 	local ok, err = pcall(fn :: any, ...)
 	if not ok then
-		warn(`[{label}] {err}`)
+		-- "failed" is what the boot test's health check greps for, so a loop error never hides
+		warn(`[{label}] failed: {err}`)
 	end
 	return ok
 end

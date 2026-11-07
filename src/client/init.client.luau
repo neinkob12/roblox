@@ -2,10 +2,6 @@
 -- Client entry point. Loads every ModuleScript in Controllers/ and UI/ with the same
 -- :Init() / :Start() lifecycle as the server. DataController always loads first.
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local Safe = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Safe"))
-
 local root = script
 
 local modules: { { name: string, mod: any } } = {}
@@ -40,11 +36,19 @@ collect(root:FindFirstChild("UI"))
 
 for _, m in modules do
 	if type(m.mod) == "table" and type(m.mod.Init) == "function" then
-		Safe.Run(`Client {m.name}:Init`, m.mod.Init, m.mod)
+		local ok, err = pcall(m.mod.Init, m.mod)
+		if not ok then
+			warn(`[Client] {m.name}:Init failed: {err}`)
+		end
 	end
 end
 for _, m in modules do
 	if type(m.mod) == "table" and type(m.mod.Start) == "function" then
-		task.spawn(Safe.Run, `Client {m.name}:Start`, m.mod.Start, m.mod)
+		task.spawn(function()
+			local ok, err = pcall(m.mod.Start, m.mod)
+			if not ok then
+				warn(`[Client] {m.name}:Start failed: {err}`)
+			end
+		end)
 	end
 end
