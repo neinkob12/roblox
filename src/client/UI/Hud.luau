@@ -153,7 +153,7 @@ local function buildCan()
 end
 
 local function buildTop()
-	priceChip = chip(root, "MilkPrice", Vector2.new(170, 50))
+	priceChip = chip(root, "MilkPrice", Vector2.new(170, 54))
 	priceChip.Position = UDim2.fromOffset(12, 8)
 	priceText = C.Label(priceChip, {
 		name = "Price",
@@ -166,7 +166,7 @@ local function buildTop()
 	priceTimer = C.Label(priceChip, {
 		name = "Timer",
 		text = "new price in 0:30",
-		size = UDim2.new(1, -14, 0, 16),
+		size = UDim2.new(1, -14, 0, 19),
 		position = UDim2.fromOffset(8, 30),
 		align = Enum.TextXAlignment.Left,
 		color = Color3.fromRGB(210, 210, 225),
@@ -176,7 +176,7 @@ local function buildTop()
 	boostList = Instance.new("Frame")
 	boostList.Name = "Boosts"
 	boostList.BackgroundTransparency = 1
-	boostList.Position = UDim2.fromOffset(12, 64)
+	boostList.Position = UDim2.fromOffset(12, 68)
 	boostList.Size = UDim2.fromOffset(170, 120)
 	boostList.Active = false
 	boostList.Parent = root
