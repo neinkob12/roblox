@@ -45,7 +45,6 @@ local safeFrameOn = false
 
 local gui: ScreenGui? = nil
 local panel: Frame? = nil
-local showButton: TextButton? = nil
 local safeFrame: Frame? = nil
 local toast: TextLabel? = nil
 local presets: { Preset } = {}
@@ -258,7 +257,7 @@ local function updateSafeFrame()
 		right.Size = UDim2.new(0, barW, 1, 0)
 		right.Position = UDim2.new(1, -barW, 0, 0)
 		inner.Size = UDim2.new(0, innerW, 1, 0)
-		inner.Position = UDim2.new(0, barW, 0, 0)
+		inner.Position = UDim2.fromOffset(barW, 0)
 	end
 end
 
@@ -356,12 +355,12 @@ local function buildGui(): ScreenGui
 	p.Name = "Panel"
 	p.AnchorPoint = Vector2.new(0, 1)
 	p.Position = UDim2.new(0, 12, 1, -12)
-	p.Size = UDim2.new(0, 5 * 70, 0, 2 * (BUTTON_H + 6))
+	p.Size = UDim2.fromOffset(5 * 70, 2 * (BUTTON_H + 6))
 	p.BackgroundTransparency = 1
 	p.Parent = sg
 	local grid = Instance.new("UIGridLayout")
-	grid.CellSize = UDim2.new(0, 64, 0, BUTTON_H)
-	grid.CellPadding = UDim2.new(0, 6, 0, 6)
+	grid.CellSize = UDim2.fromOffset(64, BUTTON_H)
+	grid.CellPadding = UDim2.fromOffset(6, 6)
 	grid.SortOrder = Enum.SortOrder.LayoutOrder
 	grid.Parent = p
 	for i = 1, #presets do
@@ -396,10 +395,9 @@ local function buildGui(): ScreenGui
 	hide.Name = "HideButton"
 	hide.AnchorPoint = Vector2.new(1, 1)
 	hide.Position = UDim2.new(1, -8, 1, -8)
-	hide.Size = UDim2.new(0, 44, 0, 44)
+	hide.Size = UDim2.fromOffset(44, 44)
 	hide.BackgroundTransparency = 0.85
 	hide.TextTransparency = 0.6
-	showButton = hide
 
 	local function fit()
 		local cam = workspace.CurrentCamera
