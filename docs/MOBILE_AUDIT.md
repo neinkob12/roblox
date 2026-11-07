@@ -4,7 +4,7 @@ Every module in `src/client/UI/` was checked against the CLAUDE.md mobile rules.
 
 ## How the scaling works
 
-`Components.Screen` puts a `UIScale` on a root frame that is laid out in reference pixels (`Theme.ReferenceSize` = 900x420):
+`UiKit.Screen` (src/client/Lib/UiKit.luau; was `Components.Screen` before the D1 cleanup) puts a `UIScale` on a root frame that is laid out in reference pixels (`Theme.ReferenceSize` = 900x420):
 
 `scale = clamp(min(screenW / 900, guiH / 420), 0.7, 1.6)`
 

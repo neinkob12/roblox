@@ -6,7 +6,7 @@ Read this before you write a single line. If you need to change a contract, say 
 
 | Work package | Owns (create/edit freely) | Account |
 |---|---|---|
-| **Lead** (this repo's integrator) | `default.project.json`, `src/server/init.server.luau`, `src/client/init.client.luau`, `src/shared/Net.luau`, `src/shared/Signal.luau`, `src/shared/Format.luau`, `src/shared/Multipliers.luau`, `src/shared/Config/Cows.luau`, `src/server/Services/DataService.luau`, `src/client/Controllers/DataController.luau`, `docs/*`, `CLAUDE.md`, `.github/*` | A |
+| **Lead** (this repo's integrator) | `default.project.json`, `src/server/init.server.luau`, `src/client/init.client.luau`, `src/shared/Net.luau`, `src/shared/Signal.luau`, `src/shared/Format.luau`, `src/shared/Multipliers.luau`, `src/shared/Config/Cows.luau`, `src/server/Services/DataService.luau`, `src/client/Controllers/DataController.luau`, `src/server/Util/*`, `src/client/Lib/*`, `src/shared/{Pricing,Capacity,Safe}.luau`, `docs/*`, `CLAUDE.md`, `.github/*` | A |
 | **A1 World & Map** | `src/server/World/*` (MapBuilder, PlotBuilder, Decor, Lighting) | A |
 | **A2 Cow Models & Stalls** | `src/shared/CowModels.luau`, `src/server/Services/StallService.luau`, `src/client/Controllers/CowAnimController.luau`, `src/client/Controllers/DiscoveryController.luau` | A |
 | **A3 Milk Flow & Dairy** | `src/server/Services/PlotService.luau`, `ProductionService.luau`, `CanService.luau`, `DairyService.luau`, `src/client/Controllers/PipeFlowController.luau`, tuning in `Config/Economy.luau` (Tank, Can, Dairy, MilkPrice, Truck, RareMilk, Offline) | A |
@@ -44,7 +44,7 @@ See the API in the header of `src/server/Services/DataService.luau`.
 
 | Where | Attribute | Type | Set by |
 |---|---|---|---|
-| `workspace` | `MilkPrice` | number (0.5 to 1.5) | A3 DairyService |
+| `workspace` | `MilkPrice` | number (Economy.MilkPrice Min..Max, 0.75 to 1.5; admin `/price` can lock it at 0.1 to 10) | A3 DairyService |
 | `workspace` | `MilkPriceNextAt` | number (os.time) | A3 |
 | `workspace` | `TruckActive` | bool | A3 |
 | `workspace` | `TruckLeavesAt` / `TruckNextAt` | number | A3 |
@@ -82,7 +82,7 @@ Workspace
         └── OwnerSign       (Part + SurfaceGui "Gui" > TextLabel "Name")        A3
 ```
 
-Pads use server-side `Touched` with a 1 second per-player debounce, and only the plot owner can use their own plot's pads. A1 must give every pad a `BillboardGui` named `Label` with a `TextLabel` named `Text`.
+Pads go through `src/server/Util/Pads.luau`: server-side `Touched`, a live Humanoid whose HumanoidRootPart is within 12 studs of the pad, a 1 second per-player debounce, and only the plot owner can use their own plot's pads. A1 must give every pad a `BillboardGui` named `Label` with a `TextLabel` named `Text`.
 
 ## 7. Definition of done for every PR
 
