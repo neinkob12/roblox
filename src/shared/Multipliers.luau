@@ -6,7 +6,7 @@
 --   data                    the player's profile data (or the client mirror)
 --   player attributes       Pass_DoubleCash (bool), FriendCount (number)
 --   workspace attributes    EventId (string, "" when none)
---   data.boosts             { [boostId] = { kind = "cash" | "production", mult = number, expires = os.time() } }
+--   data.boosts             { [boostId] = { kind = "cash" | "production", mult = number, expires = Multipliers.Now() + s } }
 
 local Economy = require(script.Parent.Config.Economy)
 local Upgrades = require(script.Parent.Config.Upgrades)
@@ -23,9 +23,15 @@ function Multipliers.ActiveEvent(): any
 	return nil
 end
 
+-- The ONE clock for boost expiry, server and client: workspace:GetServerTimeNow() (Unix seconds,
+-- synced to the server on clients). Old saves used os.time(), which is the same scale.
+function Multipliers.Now(): number
+	return workspace:GetServerTimeNow()
+end
+
 local function boostMult(data: any, kind: string): number
 	local m = 1
-	local now = os.time()
+	local now = Multipliers.Now()
 	if data.boosts then
 		for _, b in data.boosts do
 			if b.kind == kind and b.expires > now then

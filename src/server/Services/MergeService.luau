@@ -13,10 +13,10 @@ local Safe = require(ReplicatedStorage.Shared.Safe)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Cows = require(ReplicatedStorage.Shared.Config.Cows)
 local DataService = require(script.Parent.DataService)
-local HerdUtil = require(script.Parent.HerdUtil)
 local Notify = require(script.Parent.Parent.Util.Notify)
 local PlotService = require(script.Parent.PlotService)
 local Pads = require(script.Parent.Parent.Util.Pads)
+local Rewards = require(script.Parent.Parent.Util.Rewards)
 
 local MergeService = {}
 
@@ -50,7 +50,7 @@ function MergeService:MergeAll(player: Player, silent: boolean?): number
 		if n > 0 then
 			local left = have - n * cost
 			data.cows[key] = if left > 0 then left else nil
-			if HerdUtil.AddCowsRaw(player, data, tier + 1, n) then
+			if Rewards.AddCowsRaw(player, data, tier + 1, n) then
 				discoveredChanged = true
 			end
 			total += n

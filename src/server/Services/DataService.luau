@@ -7,7 +7,7 @@
 --   DataService:Set(player, key, value)                        (top-level set + replicate)
 --   DataService:Update(player, key, fn)                        (fn(old) -> new, + replicate)
 --   DataService:Replicate(player, key)                         (after mutating a nested table in place)
---   DataService:AddCash(player, amount)                        (also tracks totalCashEarned for leaderboards)
+--   DataService:AddCash(player, amount, countsAsEarned?)       (tracks totalCashEarned unless countsAsEarned == false)
 --   DataService:SpendCash(player, amount) -> boolean          (atomic check + subtract)
 --   DataService:GetProfile(player)        -> profile | nil    (Monetization only: profile:Save() after receipts)
 --   DataService.PlayerLoaded:Connect(fn(player, data))
@@ -219,13 +219,13 @@ function DataService:NewStartingCows(): { [string]: number }
 	return startingCows()
 end
 
-function DataService:AddCash(player: Player, amount: number)
+function DataService:AddCash(player: Player, amount: number, countsAsEarned: boolean?)
 	local profile = profiles[player]
 	if not profile or isBadNumber(amount) then
 		return
 	end
 	profile.Data.cash += amount
-	if amount > 0 then
+	if amount > 0 and countsAsEarned ~= false then
 		profile.Data.totalCashEarned += amount
 	end
 	replicate(player, "cash")

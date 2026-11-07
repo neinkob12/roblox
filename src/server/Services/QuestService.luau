@@ -48,9 +48,9 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
 local Quests = require(ReplicatedStorage.Shared.Config.Quests)
 local DataService = require(script.Parent.DataService)
-local CodesService = require(script.Parent.CodesService)
 local Notify = require(script.Parent.Parent.Util.Notify)
 local Debounce = require(script.Parent.Parent.Util.Debounce)
+local Rewards = require(script.Parent.Parent.Util.Rewards)
 
 local QuestService = {}
 
@@ -242,7 +242,7 @@ local function claim(player: Player, questId: any)
 	end
 	-- replace first, then grant: a second claim with the same id can never pay twice
 	data.quests.active[index] = newQuest(player, data, activeTypes(data, index))
-	local text = CodesService:GrantReward(player, q.reward, "quest_" .. (q.reward.boostKind or "x"))
+	local text = Rewards.Grant(player, q.reward, "quest_" .. (q.reward.boostKind or "x"))
 	if q.reward.kind == "cash" then
 		-- quest cash must not count toward "Earn N cash" quests
 		local b = baselines[player]

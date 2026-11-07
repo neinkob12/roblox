@@ -12,11 +12,11 @@ local Safe = require(ReplicatedStorage.Shared.Safe)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
-local HerdUtil = require(script.Parent.HerdUtil)
 local Pricing = require(ReplicatedStorage.Shared.Pricing)
 local Notify = require(script.Parent.Parent.Util.Notify)
 local PlotService = require(script.Parent.PlotService)
 local Pads = require(script.Parent.Parent.Util.Pads)
+local Rewards = require(script.Parent.Parent.Util.Rewards)
 
 local AFFORD_COLOR = Color3.fromRGB(120, 255, 120)
 local POOR_COLOR = Color3.fromRGB(255, 110, 110)
@@ -55,7 +55,7 @@ local function buy(player: Player, n: number)
 	end
 	data.cowsBought += n
 	DataService:Replicate(player, "cowsBought")
-	HerdUtil.GiveCow(player, 1, n)
+	Rewards.Cow(player, 1, n)
 	Notify.To(player, `+{n} cow{if n == 1 then "" else "s"}!`, "success")
 	BuyService:RefreshLabels(player)
 end

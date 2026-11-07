@@ -40,11 +40,7 @@ local function onRequest(player: Player)
 	-- set directly: SpendCash(cash - StartingCash) loses precision above 2^53
 	data.cash = Economy.StartingCash
 
-	local cows = {}
-	for tier, count in Economy.StartingCows do
-		cows[tostring(tier)] = count
-	end
-	data.cows = cows
+	data.cows = DataService:NewStartingCows()
 	data.cowsBought = 0
 	data.cratesBought = 0
 	data.tankMilk = 0

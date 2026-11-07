@@ -26,10 +26,10 @@ local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Cows = require(ReplicatedStorage.Shared.Config.Cows)
 local Events = require(ReplicatedStorage.Shared.Config.Events)
 local DataService = require(script.Parent.DataService)
-local HerdUtil = require(script.Parent.HerdUtil)
 local ProductionService = require(script.Parent.ProductionService)
 local WalkSpeedService = require(script.Parent.WalkSpeedService)
 local Notify = require(script.Parent.Parent.Util.Notify)
+local Rewards = require(script.Parent.Parent.Util.Rewards)
 
 local PRICE_LOCK_SECONDS = 5 * 60
 local MAX_GIVE = 1e6 -- cows / crates per command, keeps typos from freezing anything
@@ -145,7 +145,7 @@ register("cows", "/cows tier n", function(player, args)
 		return
 	end
 	n = math.clamp(math.floor(n), 1, MAX_GIVE)
-	HerdUtil.GiveCow(player, tier, n)
+	Rewards.Cow(player, tier, n)
 	local cow = Cows.Get(tier)
 	Notify.To(player, `[Admin] +{Format.Number(n)} {cow and cow.name or "?"} (tier {tier})`, "success")
 end)
@@ -169,8 +169,7 @@ register("crate", "/crate n", function(player, args)
 		return
 	end
 	local n = math.clamp(math.floor(parseNumber(args[1]) or 1), 1, MAX_GIVE)
-	data.crates = (data.crates or 0) + n
-	DataService:Replicate(player, "crates")
+	Rewards.Crates(player, n)
 	Notify.To(player, `[Admin] +{n} crates (now {data.crates})`, "success")
 end)
 

@@ -23,13 +23,13 @@ local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Cows = require(ReplicatedStorage.Shared.Config.Cows)
 local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
-local HerdUtil = require(script.Parent.HerdUtil)
 local Pricing = require(ReplicatedStorage.Shared.Pricing)
 local Notify = require(script.Parent.Parent.Util.Notify)
 local Debounce = require(script.Parent.Parent.Util.Debounce)
 local PlotService = require(script.Parent.PlotService)
 local Pads = require(script.Parent.Parent.Util.Pads)
 local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
+local Rewards = require(script.Parent.Parent.Util.Rewards)
 
 local CrateConfig = Economy.Crate
 local CRATE_COLOR = Color3.fromRGB(255, 200, 60)
@@ -63,11 +63,23 @@ function CrateService:Roll(bestTier: number, shift: number): number
 	return math.clamp(bestTier + offset + shift, 1, math.max(maxTier, math.min(bestTier, Cows.Count)))
 end
 
+-- highest tier with count > 0 (1 if none)
+local function bestTier(data: any): number
+	local best = 1
+	for key, count in data.cows do
+		local tier = tonumber(key)
+		if tier and count > 0 and tier > best then
+			best = tier
+		end
+	end
+	return best
+end
+
 local function openOne(player: Player, data: any, shift: number, source: string): number
-	local tier = CrateService:Roll(HerdUtil.BestTier(data), shift)
+	local tier = CrateService:Roll(bestTier(data), shift)
 	data.stats.cratesOpened += 1
 	DataService:Replicate(player, "stats")
-	HerdUtil.GiveCow(player, tier, 1)
+	Rewards.Cow(player, tier, 1)
 	Net.Event("CrateOpened"):FireClient(player, tier, source)
 	return tier
 end
@@ -80,8 +92,7 @@ function CrateService:GiveCrate(player: Player, premium: boolean): number?
 	if premium then
 		return openOne(player, data, CrateConfig.PremiumOddsShift, "premium")
 	end
-	data.crates += 1
-	DataService:Replicate(player, "crates")
+	Rewards.Crates(player, 1)
 	return nil
 end
 
@@ -215,8 +226,7 @@ local function spawnCrate(player: Player): boolean
 		end
 		taken = true
 		spin:Cancel()
-		data.crates += 1
-		DataService:Replicate(player, "crates")
+		Rewards.Crates(player, 1)
 		Notify.To(player, "Picked up a Mystery Milk Crate!", "rare")
 		removeCrate(player, crate)
 	end)

@@ -114,7 +114,7 @@ These are binding for the B packages:
   - `PlotService:GetPlot(player)`
   - `DairyService:Deposit(player)`
   - `CanService:FillCan(player)`
-  - `HerdUtil.GiveCow(player, tier, n)`
+  - `Rewards.Cow(player, tier, n)` (server/Util/Rewards, was HerdUtil.GiveCow)
 - **Player attributes for UI:** `MilkPerSecond`, `TankCapacity`, `CanCapacity`, `SellPerSecond`, `PlotId`.
 - **Economy tuning keys added:** `AutoMergeSeconds`, `Tank.TickSeconds/ReplicateSeconds`, `Can.AutoCollect*`, `Dairy.TickSeconds/AutoSellSeconds`, `Truck.DriveSeconds/DriveDistance`, `Crate.DropCheckSeconds/MaxWorldCrates/PremiumOddsShift`.
 
