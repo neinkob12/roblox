@@ -68,6 +68,9 @@ local TEMPLATE = {
 	lastOnline = 0, -- os.time() of last save, used for offline earnings
 	firstJoin = 0,
 	tutorialStep = 0, -- C4 TutorialService; 0 = not started, Config/Tutorial.Done = finished
+	dailyStreak = 0, -- E1 DailyService: days claimed in the current streak (see Config/Daily)
+	dailyLastClaim = 0, -- E1 DailyService: Multipliers.Now() of the last daily claim, 0 = never
+	indexClaimed = {} :: { number }, -- E1 IndexRewardService: claimed milestone counts, e.g. { 3, 6 }
 }
 
 local DataService = {}

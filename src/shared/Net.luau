@@ -33,6 +33,8 @@ local EVENTS = {
 	"RequestMergePets", -- (petId: string, variant: string) 5 same -> next variant
 	"PetHatched", -- server -> client (petUid: string, petId: string, variant: string) for the reveal
 	"RequestTutorialStep", -- (step: number) C4 TutorialService validates (only forward, max +1)
+	"RequestDailyClaim", -- () E1 DailyService: claim today's login reward (20h cooldown, 48h streak reset)
+	"RequestIndexClaim", -- (count: number) E1 IndexRewardService: claim the Index milestone at `count` cows discovered
 }
 
 local FUNCTIONS = {
