@@ -470,7 +470,14 @@ function PlotBuilder.Build(id: number, cf: CFrame, accent: Color3, parent: Insta
 		anchor.Name = "EggAnchor"
 		anchor.Position = Vector3.new(NEST_H / 2 + 0.45, 0, 0) -- vcyl's local +X is world up
 		anchor.Parent = nest
-		Builder.billboard(nest, "Label", "Text", "Nest", 7, 1.6, NEST_H / 2 + 4.2)
+		-- the nest is a rotated cylinder, so a plain StudsOffset would point sideways: adorn the label to
+		-- an attachment placed along the nest's local +X (= world up) instead
+		local labelAnchor = Instance.new("Attachment")
+		labelAnchor.Name = "LabelAnchor"
+		labelAnchor.Position = Vector3.new(NEST_H / 2 + 4.2, 0, 0)
+		labelAnchor.Parent = nest
+		local label = Builder.billboard(nest, "Label", "Text", "Nest", 7, 1.6, 0)
+		label.Adornee = labelAnchor
 		local prompt = Instance.new("ProximityPrompt")
 		prompt.Name = "Prompt"
 		prompt.ActionText = "Open Egg Shop"

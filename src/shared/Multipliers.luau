@@ -47,7 +47,7 @@ end
 -- F1 pets (added by F1, reviewed by lead) -------------------------------------------------
 -- Summed bonus of the equipped pets for one kind ("milk" | "cash" | "speed" | "luck"), e.g. 0.25 =
 -- +25%. Only the first Pets.SlotsFor(rebirths) equipped uids that are really owned count.
--- Caps: speed <= Pets.SpeedCap, luck <= Pets.LuckCap.
+-- Caps: Pets.SpeedCap, LuckCap, MilkCap, CashCap.
 function Multipliers.PetBonus(data: any, kind: string): number
 	local pets = data and data.pets
 	local equipped = data and data.equippedPets
@@ -72,6 +72,10 @@ function Multipliers.PetBonus(data: any, kind: string): number
 		total = math.min(total, Pets.SpeedCap)
 	elseif kind == "luck" then
 		total = math.min(total, Pets.LuckCap)
+	elseif kind == "milk" then
+		total = math.min(total, Pets.MilkCap)
+	elseif kind == "cash" then
+		total = math.min(total, Pets.CashCap)
 	end
 	return total
 end
