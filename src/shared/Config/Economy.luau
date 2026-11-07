@@ -17,7 +17,7 @@ Economy.StartingCows = { [1] = 1 } -- tier -> count for brand new players
 -- Buy pads (always buy tier 1 cows). Price of the n-th cow ever bought this rebirth:
 --   BuyBasePrice * BuyPriceGrowth ^ cowsBought
 Economy.BuyPads = { 1, 5, 25 }
-Economy.BuyBasePrice = 5
+Economy.BuyBasePrice = 10
 Economy.BuyPriceGrowth = 1.035
 
 -- Merge: MergeCost cows of tier N -> 1 cow of tier N+1
@@ -74,8 +74,8 @@ Economy.RareMilk = {
 -- Keeps: rebirths, discovered (index), quests progress, codes, purchases, stats.
 Economy.Rebirth = {
 	CashMultiplierPerRebirth = 0.5, -- total = 1 + 0.5 * rebirths
-	BaseCost = 1e6,
-	CostGrowth = 6, -- cost = BaseCost * CostGrowth ^ rebirths
+	BaseCost = 100e6,
+	CostGrowth = 5, -- cost = BaseCost * CostGrowth ^ rebirths
 }
 
 -- Offline earnings: cows keep filling the tank (respecting capacity) up to a cap
@@ -97,14 +97,16 @@ Economy.Crate = {
 	MaxWorldCrates = 5, -- unclaimed dropped crates per plot; no new drops above this
 	PremiumOddsShift = 1, -- premium crates roll as if the best tier were this much higher
 	BuyBasePrice = 250,
-	BuyPriceSecondsOfProduction = 120, -- price = max(BuyBasePrice, production/sec * this)
+	PriceUsesCashMultiplier = true, -- price also scales with Multipliers.Cash (rebirths made crates too cheap)
+	BuyPriceGrowth = 1.06, -- price *= this ^ data.cratesBought (reset on rebirth)
+	MaxTier = 14, -- crates never roll above this; tiers 15-18 only come from merging
+	BuyPriceSecondsOfProduction = 60, -- price = max(BuyBasePrice, production/sec * this)
 	-- Odds are relative to the player's highest tier owned (best):
 	-- offset 0 = same tier as best, +1 = one above, etc. Weights must sum to 100.
 	Odds = {
-		{ offset = -1, weight = 60 },
+		{ offset = -1, weight = 65 },
 		{ offset = 0, weight = 30 },
-		{ offset = 1, weight = 9 },
-		{ offset = 2, weight = 1 },
+		{ offset = 1, weight = 5 },
 	},
 }
 

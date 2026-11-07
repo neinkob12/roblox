@@ -4,7 +4,7 @@
 -- Owner: lead session. Other sessions READ this; propose changes in your PR description.
 --
 -- famous = true marks a cow-ified version of a known Italian-brainrot character.
--- Hard rule: NO Tung Tung Tung Sahur, NO Tralalero Tralala, NO Bombardiro Crocodilo
+-- Hard rule: NO Tung Tung Tung Sahur, NO Tralalero Tralala, NO Bombardiro Crocodilo, NO Ballerina Cappuccina
 -- (active trademark litigation or offensive original audio). Each famous name must be
 -- re-checked on USPTO TESS before going public (tracked in the Marketing/QA issue).
 
@@ -98,12 +98,12 @@ local list: { { any } } = {
 	},
 	{
 		"cappuccina",
-		"Ballerina Cappumoocina",
-		true,
+		"Tiptoe Moochiato",
+		false,
 		Color3.fromRGB(240, 220, 200),
 		Color3.fromRGB(120, 80, 50),
 		Color3.fromRGB(200, 160, 120),
-		"Coffee-cup head, pink tutu ring, standing on tip-toes (cow-ified Ballerina Cappuccina)",
+		"Coffee-cup head, pink tutu ring, standing on tip-toes (original name; renamed away from a trademarked meme name)",
 	},
 	{
 		"gelatino",

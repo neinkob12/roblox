@@ -37,8 +37,15 @@ local crateFolder: Folder
 
 function CrateService:BuyPrice(player: Player): number
 	local data = DataService:Get(player)
-	local mps = if data then Multipliers.MilkPerSecond(player, data) else 0
-	return math.floor(math.max(CrateConfig.BuyBasePrice, mps * CrateConfig.BuyPriceSecondsOfProduction))
+	if not data then
+		return CrateConfig.BuyBasePrice
+	end
+	local mps = Multipliers.MilkPerSecond(player, data)
+	if CrateConfig.PriceUsesCashMultiplier then
+		mps *= Multipliers.Cash(player, data)
+	end
+	local price = math.max(CrateConfig.BuyBasePrice, mps * CrateConfig.BuyPriceSecondsOfProduction)
+	return math.floor(price * (CrateConfig.BuyPriceGrowth or 1) ^ (data.cratesBought or 0))
 end
 
 function CrateService:Roll(bestTier: number, shift: number): number
@@ -55,7 +62,9 @@ function CrateService:Roll(bestTier: number, shift: number): number
 			break
 		end
 	end
-	return math.clamp(bestTier + offset + shift, 1, Cows.Count)
+	local maxTier = math.min(CrateConfig.MaxTier or Cows.Count, Cows.Count)
+	-- never roll above MaxTier, but never below what the best-tier offset would give a low player
+	return math.clamp(bestTier + offset + shift, 1, math.max(maxTier, math.min(bestTier, Cows.Count)))
 end
 
 local function openOne(player: Player, data: any, shift: number, source: string): number
@@ -109,6 +118,9 @@ local function onBuy(player: Player)
 		HerdUtil.Notify(player, `Not enough cash! Crate costs {Format.Cash(price)}`, "error")
 		return
 	end
+	local data = DataService:Get(player)
+	data.cratesBought = (data.cratesBought or 0) + 1
+	DataService:Replicate(player, "cratesBought")
 	CrateService:GiveCrate(player, false)
 	HerdUtil.Notify(player, "Bought a Mystery Milk Crate!", "success")
 end
