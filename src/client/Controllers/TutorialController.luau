@@ -275,9 +275,8 @@ local function onSkip()
 end
 
 local function buildBanner()
-	-- DisplayOrder 45: above panels + dimmer (20) and popups (40), below toasts (50).
-	-- (C6 adds a shared Layers table with Tutorial = 45.)
-	local _, root = C.Screen("Tutorial", 45)
+	-- Above panels + dimmer and popups, below toasts (see Theme.Layers).
+	local _, root = C.Screen("Tutorial", Theme.Layers.Tutorial)
 
 	local b = Instance.new("Frame")
 	b.Name = "Banner"
