@@ -31,7 +31,7 @@ local groups: { [string]: SoundGroup } = {}
 local enabled: { [string]: boolean } = { Music = true, SFX = true, Voice = true }
 local lastPlayed: { [string]: number } = {}
 
-local SETTING_TO_GROUP = { music = "Music", sfx = "SFX", voice = "Voice" }
+local SETTING_TO_GROUP: { [string]: string } = { music = "Music", sfx = "SFX", voice = "Voice" }
 
 ---------------------------------------------------------------------------
 -- core
