@@ -443,7 +443,7 @@ function CratesPanel:Init()
 		font = Theme.TitleFont,
 		color = Colors.Purple,
 		size = UDim2.fromOffset(110, Theme.MinTouch),
-		position = UDim2.new(1, 0, 0, 0),
+		position = UDim2.fromScale(1, 0),
 		anchor = Vector2.new(1, 0),
 		onClick = function()
 			showOdds(false)
