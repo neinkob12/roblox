@@ -391,10 +391,7 @@ function DairyService:Start()
 		local now = os.clock()
 		local dt = math.min(now - last, Economy.Dairy.TickSeconds * 4)
 		last = now
-		local ok, err = pcall(sellTick :: any, dt)
-		if not ok then
-			warn(`[DairyService] sell tick failed: {err}`)
-		end
+		Safe.Run("DairyService sell tick", sellTick, dt)
 	end
 end
 

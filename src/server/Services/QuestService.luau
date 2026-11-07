@@ -51,6 +51,7 @@ local DataService = require(script.Parent.DataService)
 local Notify = require(script.Parent.Parent.Util.Notify)
 local Debounce = require(script.Parent.Parent.Util.Debounce)
 local Rewards = require(script.Parent.Parent.Util.Rewards)
+local Safe = require(ReplicatedStorage.Shared.Safe)
 
 local QuestService = {}
 
@@ -268,10 +269,7 @@ function QuestService:Start()
 	while true do
 		task.wait(Quests.TrackSeconds)
 		for _, player in Players:GetPlayers() do
-			local ok, err = pcall(track :: any, player)
-			if not ok then
-				warn(`[QuestService] track failed for {player.Name}: {err}`)
-			end
+			Safe.Run("QuestService track", track, player)
 		end
 	end
 end

@@ -19,6 +19,7 @@ local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local DataService = require(script.Parent.DataService)
 local Notify = require(script.Parent.Parent.Util.Notify)
 local Capacity = require(ReplicatedStorage.Shared.Capacity)
+local Safe = require(ReplicatedStorage.Shared.Safe)
 
 local ProductionService = {}
 
@@ -125,10 +126,7 @@ function ProductionService:Start()
 		local dt = math.min(now - last, Economy.Tank.TickSeconds * 3)
 		last = now
 		for _, player in Players:GetPlayers() do
-			local ok, err = pcall(tickPlayer :: any, player, dt)
-			if not ok then
-				warn(`[ProductionService] tick failed for {player.Name}: {err}`)
-			end
+			Safe.Run("ProductionService tick", tickPlayer, player, dt)
 		end
 	end
 end

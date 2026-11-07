@@ -19,6 +19,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
+local Safe = require(ReplicatedStorage.Shared.Safe)
 
 local LeaderboardService = {}
 
@@ -322,10 +323,7 @@ function LeaderboardService:Start()
 
 	while true do
 		for _, board in boards do
-			local ok, err = pcall(refresh :: any, board)
-			if not ok then
-				warn(`[LeaderboardService] refresh failed: {err}`)
-			end
+			Safe.Run("LeaderboardService refresh", refresh, board)
 		end
 		-- spread writes over the cycle instead of bursting
 		local players = Players:GetPlayers()
@@ -336,10 +334,7 @@ function LeaderboardService:Start()
 		for _, player in players do
 			if player.Parent == Players then
 				for _, board in boards do
-					local ok, err = pcall(write :: any, board, player)
-					if not ok then
-						warn(`[LeaderboardService] write failed: {err}`)
-					end
+					Safe.Run("LeaderboardService write", write, board, player)
 				end
 			end
 			task.wait(gap)

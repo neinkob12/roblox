@@ -5,6 +5,9 @@
 -- Order: World first (builds the map), then Services alphabetically, DataService first.
 
 local ServerScriptService = game:GetService("ServerScriptService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Safe = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Safe"))
 local root = ServerScriptService:WaitForChild("Server")
 
 local modules: { { name: string, mod: any } } = {}
@@ -39,20 +42,12 @@ collect(root:FindFirstChild("Services"))
 
 for _, m in modules do
 	if type(m.mod) == "table" and type(m.mod.Init) == "function" then
-		local ok, err = pcall(m.mod.Init, m.mod)
-		if not ok then
-			warn(`[Server] {m.name}:Init failed: {err}`)
-		end
+		Safe.Run(`Server {m.name}:Init`, m.mod.Init, m.mod)
 	end
 end
 for _, m in modules do
 	if type(m.mod) == "table" and type(m.mod.Start) == "function" then
-		task.spawn(function()
-			local ok, err = pcall(m.mod.Start, m.mod)
-			if not ok then
-				warn(`[Server] {m.name}:Start failed: {err}`)
-			end
-		end)
+		task.spawn(Safe.Run, `Server {m.name}:Start`, m.mod.Start, m.mod)
 	end
 end
 print(`[Server] started {#modules} modules`)

@@ -7,6 +7,9 @@
 -- counts are recomputed on every join/leave.
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Safe = require(ReplicatedStorage.Shared.Safe)
 
 local FriendBoostService = {}
 
@@ -72,10 +75,7 @@ local function schedule()
 	task.spawn(function()
 		while dirty do
 			dirty = false
-			local ok, err = pcall(recompute :: any)
-			if not ok then
-				warn(`[FriendBoostService] {err}`)
-			end
+			Safe.Run("FriendBoostService", recompute)
 		end
 		running = false
 	end)
