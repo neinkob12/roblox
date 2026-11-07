@@ -132,3 +132,27 @@ All of wave 1 is merged. Wave 2 packages work in parallel:
 | **C6 Polish & mobile** | New files under `src/client/UI/` (e.g. `IndexPanel.luau`, `HudPolish`), `docs/MOBILE_AUDIT.md` | Small layout or scale fixes in existing `src/client/UI/*` files. Coordinate with C1 by keeping the diffs small. |
 
 **Rule for everyone:** rebase or merge `origin/main` before marking your PR ready. C1 merges first when it can, so fix any conflicts on your side.
+
+## 10. Where things live (D1)
+
+One obvious place per concept. If you need one of these, use it; never write a local copy.
+
+| Concept | Use | File |
+|---|---|---|
+| Toast to a player / everyone | `Notify.To(player, text, kind?)`, `Notify.All(text, kind?)` | `src/server/Util/Notify.luau` |
+| Per-player cooldown | `Debounce.Try(player, key, seconds)` (cleans up on leave) | `src/server/Util/Debounce.luau` |
+| Touch pads | `Pads.BindPlotPad(name, fn(player, plot, pad))`, `Pads.BindWorldPad(part, key, fn(player))`, `Pads.PlayerFromHit(hit, pad)` (live Humanoid + root within 12 studs), `Pads.SetLabel` | `src/server/Util/Pads.luau` |
+| Who owns which plot | `PlotService:GetPlot(player)`, `:GetOwner(plot)`, `:OwnsPlot(player, plot)`, `.PlotAssigned` | `src/server/Services/PlotService.luau` |
+| Giving things | `Rewards.Cash(player, n, countsAsEarned?)`, `.Crates`, `.Boost`, `.Cow`, `.AddCowsRaw`, `.Grant(player, rewardTable, sourceId)` | `src/server/Util/Rewards.luau` |
+| Tank / can / sell / offline formulas | `Capacity.TankCapacity`, `.CanCapacity`, `.SellPerSecond`, `.AutoCollectInterval`, `.OfflineMilk` | `src/shared/Capacity.luau` |
+| Multipliers, running event, clock | `Multipliers.Cash/Production/MilkPerSecond/MilkPrice`, `Multipliers.ActiveEvent()`, `Multipliers.Now()` | `src/shared/Multipliers.luau` |
+| Prices | `Pricing.Cows`, `.Crate`, `.Rebirth` | `src/shared/Pricing.luau` |
+| Protected loop step | `Safe.Run(label, fn, ...)` | `src/shared/Safe.luau` |
+| UI building blocks + theme | `UiKit` (imported as `C`): `Label`, `Button`, `Tween`, `Corner`, `Stroke`, `Screen`, `Card`, `Now`, `Theme`, `Layers`... | `src/client/Lib/UiKit.luau`, `src/client/Lib/Theme.luau` |
+| Panels | `Components.Panel`, `OpenPanel`, `ClosePanel`, `TogglePanel`, `OnPanelOpened` | `src/client/UI/Components.luau` |
+| Cow in a ViewportFrame | `CowViewport.Mount(parent, tier, { spin?, bob?, view? }) -> cleanup` | `src/client/Lib/CowViewport.luau` |
+| Full-screen reveals | `RevealQueue.Push(fn, priority?)` | `src/client/Lib/RevealQueue.luau` |
+
+`src/server/Util/` and `src/client/Lib/` are plain modules: the loaders do NOT auto-load them.
+
+**Clock:** boost expiry (`data.boosts[id].expires`) uses `Multipliers.Now()` = `workspace:GetServerTimeNow()` on server and client. Workspace timer attributes (`EventEndsAt`, `TruckLeavesAt`, `MilkPriceNextAt`...) are `os.time()` on the server; the client compares them with `UiKit.Now()`, which is the same Unix scale.
