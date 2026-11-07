@@ -196,7 +196,8 @@ local function onHatch(player: Player, key: any)
 		Notify.To(player, `Your pet inventory is full ({Pets.MaxInventory})! Merge some pets first.`, "error")
 		return
 	end
-	local petId = Odds.Roll(Odds.Egg(egg.id, tonumber(nest.luck) or 0), rng)
+	local luck = math.clamp(tonumber(nest.luck) or 0, 0, Pets.LuckCap)
+	local petId = Odds.Roll(Odds.Egg(egg.id, luck), rng)
 	local uid = PetService:AddPet(player, petId, "normal")
 	if not uid then
 		return
