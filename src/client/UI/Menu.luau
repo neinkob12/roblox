@@ -1,5 +1,5 @@
 --!strict
--- B1: Side buttons on the right edge (2 columns x 4 rows, anchored top-right so they stay
+-- B1: Side buttons on the right edge (3 columns x 3 rows since F2, anchored top-right so they stay
 -- above the mobile jump button; C6 added Index and moved the grid up, see docs/MOBILE_AUDIT.md).
 -- Each one toggles a panel registered with Components.Panel(name, ...).
 
@@ -16,6 +16,7 @@ local BUTTONS = {
 	{ panel = "Quests", icon = "📜", label = "Quests", color = Colors.Blue },
 	{ panel = "Shop", icon = "🛒", label = "Shop", color = Colors.Purple },
 	{ panel = "Index", icon = "📖", label = "Index", color = Colors.Orange },
+	{ panel = "Pets", icon = "🐾", label = "Pets", color = Colors.Pink }, -- F2
 	{ panel = "Daily", icon = "🎁", label = "Daily", color = Colors.Red }, -- E1 DailyPanel (popup, not a panel)
 	{ panel = "Settings", icon = "⚙️", label = "Settings", color = Colors.Grey },
 }
@@ -47,10 +48,13 @@ function Menu:Init()
 	local holder = Instance.new("Frame")
 	holder.Name = "SideButtons"
 	holder.BackgroundTransparency = 1
-	local rows = math.ceil(#BUTTONS / 2)
+	-- F2: 9 buttons as 2 columns would be 5 rows and reach the mobile jump button (MOBILE_AUDIT #5),
+	-- so the grid is 3 columns (3 rows, same height as before). Theme.MenuReserve matches the width.
+	local cols = Theme.MenuColumns
+	local rows = math.ceil(#BUTTONS / cols)
 	holder.AnchorPoint = Vector2.new(1, 0)
 	holder.Position = UDim2.new(1, -10, 0, 10)
-	holder.Size = UDim2.fromOffset(SIZE * 2 + GAP, SIZE * rows + GAP * (rows - 1))
+	holder.Size = UDim2.fromOffset(SIZE * cols + GAP * (cols - 1), SIZE * rows + GAP * (rows - 1))
 	holder.Parent = root
 	local grid = Instance.new("UIGridLayout")
 	grid.CellSize = UDim2.fromOffset(SIZE, SIZE)

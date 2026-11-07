@@ -316,6 +316,43 @@ local function buildDairy(): Model
 	end
 	Builder.billboard(stop, "Label", "Text", "Milk Truck", 10, 2.5, 3)
 
+	-- F2 egg stand at the free plaza slot (270 degrees): counter + giant egg; its ProximityPrompt
+	-- "Prompt" opens the Egg Shop on the client (EggShopPanel). No server behavior.
+	local eggPos = dir(270) * 24
+	local eggCF = CFrame.lookAt(eggPos + Vector3.new(0, 1.5, 0), Vector3.new(0, 1.5, 0))
+	local eggStand = Builder.part({
+		Name = "EggStand",
+		Size = Vector3.new(8, 3, 3),
+		CFrame = eggCF,
+		Color = Color3.fromRGB(250, 200, 90),
+		CanTouch = false,
+		Parent = dairy,
+	})
+	Builder.decor({
+		Name = "EggStandTop",
+		Size = Vector3.new(8.6, 0.4, 3.6),
+		CFrame = eggCF * CFrame.new(0, 1.7, 0),
+		Color = C.white,
+		Parent = eggStand,
+	})
+	Builder.decor({
+		Name = "BigEgg",
+		Shape = Enum.PartType.Ball,
+		Size = Vector3.new(4, 4, 4),
+		CFrame = eggCF * CFrame.new(0, 4, 1),
+		Color = Color3.fromRGB(255, 248, 230),
+		Parent = eggStand,
+	})
+	Builder.billboard(eggStand, "Label", "Text", "EGG SHOP", 10, 2.5, 7.5)
+	local eggPrompt = Instance.new("ProximityPrompt")
+	eggPrompt.Name = "Prompt"
+	eggPrompt.ActionText = "Egg Shop"
+	eggPrompt.ObjectText = "Pet Eggs"
+	eggPrompt.HoldDuration = 0
+	eggPrompt.MaxActivationDistance = 14
+	eggPrompt.RequiresLineOfSight = false
+	eggPrompt.Parent = eggStand
+
 	dairy.PrimaryPart = deposit
 	dairy.Parent = workspace
 	return dairy
