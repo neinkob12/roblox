@@ -49,7 +49,14 @@ local TANK_SIZE = 10
 local TANK_H = 13
 local TANK_PLINTH = 0.6
 
+-- F2 nests: plot-local (x, z) of Nest1..Nest4, right of the spawn, between MergePad and the stalls
+local NEST_SPOTS = { Vector2.new(17, -1), Vector2.new(25, -1), Vector2.new(17, 7), Vector2.new(25, 7) }
+local NEST_RADIUS = 1.8
+local NEST_H = 1.4
+
 local C = {
+	stone = Color3.fromRGB(170, 165, 160),
+	hayDark = Color3.fromRGB(205, 165, 70),
 	floor = Color3.fromRGB(140, 206, 86),
 	dirt = Color3.fromRGB(214, 172, 110),
 	fence = Color3.fromRGB(250, 246, 236),
@@ -426,6 +433,53 @@ function PlotBuilder.Build(id: number, cf: CFrame, accent: Color3, parent: Insta
 		CanCollide = false,
 		Parent = plot,
 	})
+
+	-- Nests (F2): hay nests on stone pedestals, a 2x2 grid in the free yard right of the spawn.
+	-- NestN is the pedestal Part: attribute NestKey = "N", BillboardGui "Label" > TextLabel "Text",
+	-- Attachment "EggAnchor" on top, ProximityPrompt "Prompt". NestController (client) drives the
+	-- egg model, labels and prompt text; the server only validates RequestHatch(nestKey).
+	for i, xz in NEST_SPOTS do
+		local nest = Builder.vcyl(at(xz.X, FLOOR, xz.Y).Position, NEST_RADIUS, NEST_H, {
+			Name = "Nest" .. i,
+			Color = C.stone,
+			CanTouch = false,
+			Parent = plot,
+		})
+		nest:SetAttribute("NestKey", tostring(i))
+		local topY = FLOOR + NEST_H
+		Builder.vcyl(at(xz.X, topY, xz.Y).Position, NEST_RADIUS + 0.25, 0.5, {
+			Name = "Hay",
+			Color = C.hay,
+			Material = Enum.Material.Grass,
+			CanTouch = false,
+			CanCollide = false,
+			Parent = nest,
+		})
+		for k = 0, 5 do
+			local a = k * math.pi / 3
+			Builder.decor({
+				Name = "Straw",
+				Size = Vector3.new(1.4, 0.35, 0.5),
+				CFrame = at(xz.X + math.cos(a) * NEST_RADIUS, topY + 0.55, xz.Y + math.sin(a) * NEST_RADIUS)
+					* CFrame.Angles(0, -a + math.pi / 2, math.rad(18)),
+				Color = if k % 2 == 0 then C.hay else C.hayDark,
+				Parent = nest,
+			})
+		end
+		local anchor = Instance.new("Attachment")
+		anchor.Name = "EggAnchor"
+		anchor.Position = Vector3.new(NEST_H / 2 + 0.45, 0, 0) -- vcyl's local +X is world up
+		anchor.Parent = nest
+		Builder.billboard(nest, "Label", "Text", "Nest", 7, 1.6, NEST_H / 2 + 4.2)
+		local prompt = Instance.new("ProximityPrompt")
+		prompt.Name = "Prompt"
+		prompt.ActionText = "Open Egg Shop"
+		prompt.ObjectText = "Nest " .. i
+		prompt.HoldDuration = 0
+		prompt.MaxActivationDistance = 12
+		prompt.RequiresLineOfSight = false
+		prompt.Parent = nest
+	end
 
 	-- Spawn ------------------------------------------------------------------
 	local spawn = Builder.part({
