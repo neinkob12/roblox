@@ -122,7 +122,7 @@ local function onEquip(player: Player, uid: any, equip: any)
 	if typeof(uid) ~= "string" or #uid > 64 or typeof(equip) ~= "boolean" then
 		return
 	end
-	if not Debounce.Try(player, "equipPet", 0.15) then
+	if not Debounce.Try(player, "equipPet", 0.1) then
 		return
 	end
 	local data = DataService:Get(player)
@@ -159,7 +159,7 @@ local function onMerge(player: Player, petId: any, variant: any)
 	if not pet or not nextVariant then
 		return
 	end
-	if not Debounce.Try(player, "mergePets", 0.3) then
+	if not Debounce.Try(player, "mergePets", 0.2) then
 		return
 	end
 	local data = DataService:Get(player)

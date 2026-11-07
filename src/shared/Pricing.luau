@@ -39,7 +39,10 @@ function Pricing.Egg(player: Player, data: any, eggId: string): number
 	if not data then
 		return egg.minPrice
 	end
-	local income = Multipliers.MilkPerSecond(player, data) * Multipliers.Cash(player, data)
+	-- stable price: milk/s x the permanent rebirth bonus only. Using the full cash multiplier made eggs
+	-- cost double during cash events and forever for Double Cash pass buyers.
+	local rebirthMult = 1 + Economy.Rebirth.CashMultiplierPerRebirth * (data.rebirths or 0)
+	local income = Multipliers.MilkPerSecond(player, data) * rebirthMult
 	return math.floor(math.max(egg.minPrice, income * egg.priceSeconds))
 end
 

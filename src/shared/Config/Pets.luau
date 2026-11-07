@@ -3,7 +3,7 @@
 -- Boost math lives in shared/Multipliers.luau (PetBonus); odds in shared/Odds.luau (Egg).
 --
 -- A pet's boost = rarity.boost (or SpeedBoost for speed pets, half for luck pets) x variant.mult.
--- Totals: speed is capped at SpeedCap, luck at LuckCap. Milk and cash are uncapped.
+-- Totals: each kind is capped (SpeedCap, LuckCap, MilkCap, CashCap) so pets can't break rebirth pacing.
 
 export type BoostKind = "milk" | "cash" | "speed" | "luck"
 export type Rarity = { id: string, name: string, order: number, boost: number, speedBoost: number, color: Color3 }
@@ -16,6 +16,8 @@ Pets.MaxInventory = 50 -- pets owned (eggs waiting in nests count toward it when
 Pets.MergeCount = 5 -- identical pets merged into 1 of the next variant
 Pets.SpeedCap = 0.3 -- total walk speed bonus (+30%)
 Pets.LuckCap = 1.0 -- total luck (+100%)
+Pets.MilkCap = 3.0 -- total milk bonus (+300%); milk and cash multiply, so pets give at most x16 income
+Pets.CashCap = 3.0 -- total cash bonus (+300%)
 Pets.LuckFactor = 0.5 -- luck pets give half the rarity's boost
 Pets.IndexMilkPerStep = 0.02 -- permanent +2% milk ...
 Pets.IndexStep = 5 -- ... for every 5 pet index entries discovered

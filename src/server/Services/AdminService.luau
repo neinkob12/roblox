@@ -27,7 +27,8 @@ local Cows = require(ReplicatedStorage.Shared.Config.Cows)
 local Events = require(ReplicatedStorage.Shared.Config.Events)
 local DataService = require(script.Parent.DataService)
 local ProductionService = require(script.Parent.ProductionService)
-local WalkSpeedService = require(script.Parent.WalkSpeedService)
+local PetService = require(script.Parent.PetService)
+local Pets = require(ReplicatedStorage.Shared.Config.Pets)
 local Notify = require(script.Parent.Parent.Util.Notify)
 local Rewards = require(script.Parent.Parent.Util.Rewards)
 
@@ -161,6 +162,13 @@ register("rebirths", "/rebirths n", function(player, args)
 	end
 	data.rebirths = math.min(math.floor(n), MAX_REBIRTHS)
 	DataService:Replicate(player, "rebirths")
+	-- fewer rebirths can mean fewer pet slots: unequip the extras so the attribute and UI stay honest
+	local slots = Pets.SlotsFor(data.rebirths)
+	while #data.equippedPets > slots do
+		table.remove(data.equippedPets)
+	end
+	DataService:Replicate(player, "equippedPets")
+	PetService:Refresh(player)
 	local mult = 1 + Economy.Rebirth.CashMultiplierPerRebirth * data.rebirths
 	Notify.To(player, `[Admin] rebirths = {data.rebirths} (cash x{Format.Number(mult)})`, "success")
 end)
@@ -195,7 +203,7 @@ register("reset", "/reset  (wipe your data)", function(player, _args)
 	data.firstJoin = os.time()
 	data.lastOnline = os.time()
 	replicateAll(player, data)
-	WalkSpeedService:Apply(player)
+	PetService:Refresh(player) -- clears the EquippedPets attribute (also re-applies walk speed)
 	Notify.To(player, "[Admin] data wiped. Rejoin for a fully clean start (plot, quests).", "success")
 end)
 
