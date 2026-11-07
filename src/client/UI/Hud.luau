@@ -18,6 +18,7 @@ local Theme = require(script.Parent.Parent.Lib.Theme)
 local C = require(script.Parent.Parent.Lib.UiKit)
 local TopStack = require(script.Parent.TopStack)
 local DataController = require(script.Parent.Parent.Controllers.DataController)
+local Safe = require(ReplicatedStorage.Shared.Safe)
 
 local player = Players.LocalPlayer
 local Colors = Theme.Colors
@@ -408,10 +409,7 @@ function Hud:Start()
 	updateSelling()
 
 	while true do
-		local ok, err = pcall(updateTimers :: any)
-		if not ok then
-			warn(`[Hud] {err}`)
-		end
+		Safe.Run("Hud timers", updateTimers)
 		task.wait(0.25)
 	end
 end

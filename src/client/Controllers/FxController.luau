@@ -23,6 +23,7 @@ local Fx = require(ReplicatedStorage.Shared.Fx)
 local Format = require(ReplicatedStorage.Shared.Format)
 local CowModels = require(ReplicatedStorage.Shared.CowModels)
 local DataController = require(script.Parent.DataController)
+local Safe = require(ReplicatedStorage.Shared.Safe)
 
 local player = Players.LocalPlayer
 
@@ -992,13 +993,7 @@ function FxController:Init()
 			return
 		end
 		local p = if typeof(payload) == "table" then payload else {}
-		local ok, err = pcall(function(): any
-			handler(p)
-			return nil
-		end)
-		if not ok then
-			warn(`[FxController] {kind} failed: {err}`)
-		end
+		Safe.Run(`FxController {kind}`, handler, p)
 	end)
 end
 
