@@ -27,11 +27,12 @@ Harness.Services = Services
 function Harness.new(opts)
 	opts = opts or {}
 	local self = setmetatable({}, Harness)
-	self.root = opts.root or "."
+	self.projectRoot = opts.root or "."
 	self.nextUserId = 1001
 	self.players = {}
 	self.clientLog = {} -- [Player] = { { name, args } }
 	S.echo = opts.echo ~= false
+	self.beforeStart = opts.beforeStart
 	math.randomseed(opts.seed or 42)
 	return self
 end
@@ -40,7 +41,10 @@ function Harness:boot()
 	local game = Services.newGame()
 	self.game = game
 	Loader.makeGlobals(game)
-	Loader.buildPlace(game, self.root)
+	Loader.buildPlace(game, self.projectRoot)
+	if self.beforeStart then
+		self.beforeStart(game)
+	end
 	self.server = Loader.newContext("server", true, nil)
 	Services.state.server = self.server
 	S.defaultCtx = self.server
@@ -205,6 +209,7 @@ function Harness:removePlayer(player)
 	end
 	local game = self.game
 	local ctx = Services.state.clients[player]
+	Inst.I(player).leaving = true
 	S.spawnIn(self.server, function()
 		Inst.fire(game.Players, "PlayerRemoving", player)
 	end)
@@ -292,6 +297,16 @@ end
 
 function Harness:clearReceived(player)
 	self.clientLog[player] = {}
+end
+
+-- Add a ModuleScript with the given source (for self-tests).
+function Harness.addModule(parent, name, source)
+	local m = Inst.create("ModuleScript")
+	m.Name = name
+	Inst.I(m).source = source
+	Inst.I(m).path = "selftest/" .. name
+	m.Parent = parent
+	return m
 end
 
 function Harness:errors()

@@ -40,3 +40,25 @@ jobs:
         with:
           name: BrainrotCowFarm-place
           path: BrainrotCowFarm.rbxlx
+
+  boot-test:
+    # C2: boots the real server + client code headless under Lune with a mocked Roblox
+    # runtime (tests/mock) and plays the core loop (tests/scenarios). See tests/README.md.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Lune
+        id: cache-lune
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/lune
+          key: tools-lune0.11.1
+
+      - name: Install Lune
+        if: steps.cache-lune.outputs.cache-hit != 'true'
+        run: cargo install lune --version 0.11.1 --locked
+
+      - name: Boot test
+        run: lune run tests/run.luau

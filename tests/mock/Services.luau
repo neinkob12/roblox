@@ -975,6 +975,9 @@ simple("Player", "Instance", {
 	events = { "CharacterAdded", "CharacterRemoving", "CharacterAppearanceLoaded", "Chatted", "Idled", "OnTeleport" },
 	methods = {
 		Kick = function(self, message)
+			if I(self).leaving or self.Parent == nil then
+				return -- kicking a player who is already leaving does nothing
+			end
 			state.kicked[self.UserId] = message or ""
 			S.log("warn", ctx(), `Player {self.Name} kicked: {message}`)
 			if M.removePlayer then
