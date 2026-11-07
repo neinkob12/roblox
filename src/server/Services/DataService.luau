@@ -61,7 +61,7 @@ local TEMPLATE = {
 	boosts = {} :: { [string]: { kind: string, mult: number, expires: number } },
 	quests = {} :: { [string]: any }, -- QuestService owns the shape
 	redeemedCodes = {} :: { [string]: boolean },
-	settings = { music = true, sfx = true, voice = true },
+	settings = { music = true, sfx = true, voice = true, reduceMotion = false },
 	stats = { milkSold = 0, merges = 0, cratesOpened = 0, playSeconds = 0 },
 	lastOnline = 0, -- os.time() of last save, used for offline earnings
 	firstJoin = 0,
