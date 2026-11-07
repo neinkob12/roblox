@@ -72,7 +72,7 @@ local function schedule()
 	task.spawn(function()
 		while dirty do
 			dirty = false
-			local ok, err = pcall(recompute)
+			local ok, err = pcall(recompute :: any)
 			if not ok then
 				warn(`[FriendBoostService] {err}`)
 			end

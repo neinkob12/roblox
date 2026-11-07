@@ -77,7 +77,7 @@ function EventService:Start()
 	while true do
 		workspace:SetAttribute("EventNextAt", os.time() + GAP)
 		task.wait(GAP)
-		local ok, err = pcall(runOne)
+		local ok, err = pcall(runOne :: any)
 		if not ok then
 			warn(`[EventService] event failed: {err}`)
 			workspace:SetAttribute("EventId", "")

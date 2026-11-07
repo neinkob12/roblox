@@ -267,7 +267,7 @@ function QuestService:Start()
 	while true do
 		task.wait(Quests.TrackSeconds)
 		for _, player in Players:GetPlayers() do
-			local ok, err = pcall(track, player)
+			local ok, err = pcall(track :: any, player)
 			if not ok then
 				warn(`[QuestService] track failed for {player.Name}: {err}`)
 			end

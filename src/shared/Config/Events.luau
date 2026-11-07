@@ -11,12 +11,22 @@ Events.EverySeconds = 10 * 60 -- gap between the end of one event and the start 
 Events.DebugFastInStudio = false
 Events.DebugEverySeconds = 30
 Events.DebugDurationSeconds = 20
+export type EventDef = {
+	id: string,
+	name: string,
+	seconds: number,
+	cashMultiplier: number?,
+	productionMultiplier: number?,
+	rareChanceMultiplier: number?,
+	crateDropMultiplier: number?,
+}
+
 Events.List = {
 	{ id = "DoublePrice", name = "Milk Price Frenzy!", seconds = 180, cashMultiplier = 2 },
 	{ id = "MilkFlood", name = "Milk Flood!", seconds = 180, productionMultiplier = 2 },
 	{ id = "GoldenRush", name = "Golden Milk Rush!", seconds = 120, rareChanceMultiplier = 5 },
 	{ id = "CrateRain", name = "Crate Rain!", seconds = 90, crateDropMultiplier = 10 },
-}
+} :: { EventDef }
 
 Events.ById = {}
 for _, e in Events.List do
