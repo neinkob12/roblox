@@ -2,7 +2,7 @@
 -- C4: Client side of the onboarding tutorial.
 --
 -- Watches DataController ("tutorialStep" + the keys the step checks), shows:
---   * a big friendly banner (top-center, below the HUD chips) with a Skip button
+--   * a big friendly banner (bottom-center, above the sell chip) with a Skip button
 --   * a Beam from the character to the step's target part
 --   * a bouncing, spinning 3D arrow (built from Parts) above the target
 -- When a step's condition (Config/Tutorial) is met it sends RequestTutorialStep(current + 1).
@@ -274,15 +274,18 @@ local function onSkip()
 end
 
 local function buildBanner()
-	-- DisplayOrder 8: above the HUD (5/6), below panels (20), popups and notifications
-	local _, root = C.Screen("Tutorial", 8)
+	-- DisplayOrder 45: above panels + dimmer (20) and popups (40), below toasts (50).
+	-- (C6 adds a shared Layers table with Tutorial = 45.)
+	local _, root = C.Screen("Tutorial", 45)
 
 	local b = Instance.new("Frame")
 	b.Name = "Banner"
-	b.AnchorPoint = Vector2.new(0.5, 0)
-	-- y 90: below the event chip (8) and truck banner (48) of the HUD
-	b.Position = UDim2.new(0.5, 0, 0, 90)
-	b.Size = UDim2.fromOffset(470, 72)
+	-- Bottom-center, just above the HUD's sell chip (bottom 72..98). Top-center is taken by the
+	-- event chip, truck banner and toasts. 380 wide keeps it clear of the lifted cash block on
+	-- the left (x 12..262) and the mobile jump button on the right.
+	b.AnchorPoint = Vector2.new(0.5, 1)
+	b.Position = UDim2.new(0.5, 0, 1, -106)
+	b.Size = UDim2.fromOffset(380, 72)
 	b.BackgroundColor3 = Colors.Blue
 	b.BorderSizePixel = 0
 	b.Visible = false
@@ -303,7 +306,7 @@ local function buildBanner()
 	chip.Name = "StepChip"
 	chip.AnchorPoint = Vector2.new(0, 0.5)
 	chip.Position = UDim2.new(0, 10, 0.5, 0)
-	chip.Size = UDim2.fromOffset(58, 52)
+	chip.Size = UDim2.fromOffset(50, 52)
 	chip.BackgroundColor3 = Colors.Yellow
 	chip.BorderSizePixel = 0
 	C.Corner(chip, 12)
@@ -321,8 +324,8 @@ local function buildBanner()
 	textLabel = C.Label(b, {
 		name = "Text",
 		text = "",
-		size = UDim2.new(1, -176, 1, -14),
-		position = UDim2.new(0, 76, 0.5, 0),
+		size = UDim2.new(1, -160, 1, -14),
+		position = UDim2.new(0, 68, 0.5, 0),
 		anchor = Vector2.new(0, 0.5),
 		font = Theme.TitleFont,
 		stroke = 3,
@@ -332,7 +335,7 @@ local function buildBanner()
 	local btn, caption = C.Button(b, {
 		name = "Skip",
 		text = "Skip",
-		size = UDim2.fromOffset(84, Theme.MinTouch),
+		size = UDim2.fromOffset(76, Theme.MinTouch),
 		position = UDim2.new(1, -8, 0.5, 0),
 		anchor = Vector2.new(1, 0.5),
 		color = Colors.Grey,
