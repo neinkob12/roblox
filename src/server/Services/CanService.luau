@@ -16,15 +16,12 @@ local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
 local DataService = require(script.Parent.DataService)
-local PlotService = require(script.Parent.PlotService)
 local ProductionService = require(script.Parent.ProductionService)
 local Notify = require(script.Parent.Parent.Util.Notify)
 local Debounce = require(script.Parent.Parent.Util.Debounce)
+local Pads = require(script.Parent.Parent.Util.Pads)
 
 local CanService = {}
-
-local DEBOUNCE = 1
-local hookedTaps: { [BasePart]: boolean } = {}
 
 function CanService:GetCanCapacity(player: Player, data: any): number
 	local mps = Multipliers.MilkPerSecond(player, data)
@@ -53,14 +50,7 @@ function CanService:FillCan(player: Player): number
 	return move
 end
 
-local function onTapTouched(plot: Model, hit: BasePart)
-	local player = PlotService:IsOwnerTouch(plot, hit)
-	if not player then
-		return
-	end
-	if not Debounce.Try(player, "tankTap", DEBOUNCE) then
-		return
-	end
+local function onTap(player: Player)
 	local data = DataService:Get(player)
 	if not data then
 		return
@@ -75,23 +65,6 @@ local function onTapTouched(plot: Model, hit: BasePart)
 	end
 end
 
-local function hookPlot(plot: Instance)
-	if not plot:IsA("Model") then
-		return
-	end
-	local tap = plot:FindFirstChild("TankTap") or plot:WaitForChild("TankTap", 10)
-	if not tap or not tap:IsA("BasePart") or hookedTaps[tap] then
-		if not tap then
-			warn(`[CanService] {plot.Name} has no TankTap`)
-		end
-		return
-	end
-	hookedTaps[tap] = true
-	tap.Touched:Connect(function(hit)
-		onTapTouched(plot, hit)
-	end)
-end
-
 function CanService:Init()
 	DataService.PlayerLoaded:Connect(function(player: Player, data: any)
 		player:SetAttribute("CanCapacity", CanService:GetCanCapacity(player, data))
@@ -99,16 +72,8 @@ function CanService:Init()
 end
 
 function CanService:Start()
-	task.spawn(function()
-		local plots = workspace:WaitForChild("Plots", 30)
-		if not plots then
-			warn("[CanService] workspace.Plots not found")
-			return
-		end
-		for _, plot in plots:GetChildren() do
-			task.spawn(hookPlot, plot)
-		end
-		plots.ChildAdded:Connect(hookPlot)
+	Pads.BindPlotPad("TankTap", function(player)
+		onTap(player)
 	end)
 
 	-- capacity attribute + autoCollect upgrade

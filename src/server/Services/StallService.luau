@@ -10,14 +10,16 @@
 --
 -- Reacts to data.cows by polling every 0.5s (cheap: it only compares numbers and touches
 -- instances when a count changes), and clears instantly when OwnerUserId changes.
+-- Who owns a plot comes from PlotService:GetOwner (the one plot authority).
 
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Cows = require(ReplicatedStorage.Shared.Config.Cows)
 local CowModels = require(ReplicatedStorage.Shared.CowModels)
 local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
+local PlotService = require(script.Parent.PlotService)
+local Safe = require(ReplicatedStorage.Shared.Safe)
 
 local POLL_SECONDS = 0.5
 
@@ -102,8 +104,8 @@ local function placeCow(stall: Instance, tier: number): Model?
 end
 
 local function syncPlot(plot: Instance)
-	local ownerId = plot:GetAttribute("OwnerUserId")
-	local owner = if type(ownerId) == "number" and ownerId ~= 0 then Players:GetPlayerByUserId(ownerId) else nil
+	local owner = if plot:IsA("Model") then PlotService:GetOwner(plot) else nil
+	local ownerId = if owner then owner.UserId else 0
 	local data = owner and DataService:Get(owner)
 
 	local ps: PlotState? = plotStates[plot]
@@ -118,7 +120,7 @@ local function syncPlot(plot: Instance)
 		return
 	end
 	if not ps then
-		ps = { ownerId = ownerId :: number, stalls = {} }
+		ps = { ownerId = ownerId, stalls = {} }
 		plotStates[plot] = ps
 	end
 	local state = ps :: PlotState
@@ -186,10 +188,7 @@ function StallService:Start()
 	while true do
 		task.wait(POLL_SECONDS)
 		for _, plot in plots:GetChildren() do
-			local ok, err = pcall(syncPlot :: any, plot)
-			if not ok then
-				warn(`[StallService] {plot.Name}: {err}`)
-			end
+			Safe.Run(`StallService {plot.Name}`, syncPlot, plot)
 		end
 	end
 end

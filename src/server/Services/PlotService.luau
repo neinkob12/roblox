@@ -4,9 +4,10 @@
 --
 --   PlotService:GetPlot(player)          -> Model | nil
 --   PlotService:GetOwner(plot)           -> Player | nil
---   PlotService:GetPlayerFromHit(hit)    -> Player | nil   (alive character that touched a part)
---   PlotService:IsOwnerTouch(plot, hit)  -> Player | nil   (the toucher, only if they own the plot)
+--   PlotService:OwnsPlot(player, plot)   -> boolean
 --   PlotService.PlotAssigned:Connect(fn(player, plot))
+--
+-- This is the ONLY place that knows who owns which plot. Touch pads live in server/Util/Pads.
 --
 -- Sets: plot attribute OwnerUserId, player attribute PlotId, OwnerSign text,
 -- player.RespawnLocation and teleports the character to the plot's Spawn.
@@ -184,28 +185,8 @@ function PlotService:GetOwner(plot: Model): Player?
 	return ownerOf[plot]
 end
 
-function PlotService:GetPlayerFromHit(hit: BasePart): Player?
-	local model = hit:FindFirstAncestorOfClass("Model")
-	if not model then
-		return nil
-	end
-	local player = Players:GetPlayerFromCharacter(model)
-	if not player then
-		return nil
-	end
-	local humanoid = model:FindFirstChildOfClass("Humanoid")
-	if not humanoid or humanoid.Health <= 0 then
-		return nil
-	end
-	return player
-end
-
-function PlotService:IsOwnerTouch(plot: Model, hit: BasePart): Player?
-	local player = PlotService:GetPlayerFromHit(hit)
-	if player and ownerOf[plot] == player then
-		return player
-	end
-	return nil
+function PlotService:OwnsPlot(player: Player, plot: Instance): boolean
+	return ownerOf[plot :: Model] == player
 end
 
 return PlotService

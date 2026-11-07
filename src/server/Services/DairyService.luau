@@ -22,13 +22,12 @@ local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
 local DataService = require(script.Parent.DataService)
-local PlotService = require(script.Parent.PlotService)
 local Notify = require(script.Parent.Parent.Util.Notify)
 local Debounce = require(script.Parent.Parent.Util.Debounce)
+local Pads = require(script.Parent.Parent.Util.Pads)
 
 local DairyService = {}
 
-local DEBOUNCE = 1
 local rng = Random.new()
 
 local dairy: Instance? = nil
@@ -90,15 +89,7 @@ local function sellTick(dt: number)
 	end
 end
 
-local function onDepositTouched(hit: BasePart)
-	local player = PlotService:GetPlayerFromHit(hit)
-	if not player or not Debounce.Try(player, "depositPad", DEBOUNCE) then
-		return
-	end
-	local data = DataService:Get(player)
-	if not data then
-		return
-	end
+local function onDeposit(player: Player)
 	local price = Multipliers.MilkPrice()
 	local milk = DairyService:Deposit(player)
 	if milk > 0 then
@@ -108,11 +99,7 @@ local function onDepositTouched(hit: BasePart)
 	end
 end
 
-local function onCashTouched(hit: BasePart)
-	local player = PlotService:GetPlayerFromHit(hit)
-	if not player or not Debounce.Try(player, "cashPad", DEBOUNCE) then
-		return
-	end
+local function onCollect(player: Player)
 	local data = DataService:Get(player)
 	if not data then
 		return
@@ -366,13 +353,13 @@ function DairyService:Start()
 	if dairy then
 		local deposit = dairy:FindFirstChild("DepositPad") or dairy:WaitForChild("DepositPad", 10)
 		if deposit and deposit:IsA("BasePart") then
-			deposit.Touched:Connect(onDepositTouched)
+			Pads.BindWorldPad(deposit, "DepositPad", onDeposit)
 		else
 			warn("[DairyService] Dairy.DepositPad not found")
 		end
 		local cashPad = dairy:FindFirstChild("CashPad") or dairy:WaitForChild("CashPad", 10)
 		if cashPad and cashPad:IsA("BasePart") then
-			cashPad.Touched:Connect(onCashTouched)
+			Pads.BindWorldPad(cashPad, "CashPad", onCollect)
 		else
 			warn("[DairyService] Dairy.CashPad not found")
 		end

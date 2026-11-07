@@ -15,6 +15,8 @@ local Cows = require(ReplicatedStorage.Shared.Config.Cows)
 local DataService = require(script.Parent.DataService)
 local HerdUtil = require(script.Parent.HerdUtil)
 local Notify = require(script.Parent.Parent.Util.Notify)
+local PlotService = require(script.Parent.PlotService)
+local Pads = require(script.Parent.Parent.Util.Pads)
 
 local MergeService = {}
 
@@ -75,21 +77,21 @@ end
 
 local function refreshLabel(player: Player)
 	local data = DataService:Get(player)
-	local plot = HerdUtil.GetPlot(player)
+	local plot = PlotService:GetPlot(player)
 	local pad = plot and plot:FindFirstChild("MergePad")
 	if not data or not pad then
 		return
 	end
 	local n = MergeService:CountMerges(data.cows)
 	if n > 0 then
-		HerdUtil.SetLabel(pad, `MERGE\n{n} ready!`, Color3.fromRGB(255, 220, 80))
+		Pads.SetLabel(pad, `MERGE\n{n} ready!`, Color3.fromRGB(255, 220, 80))
 	else
-		HerdUtil.SetLabel(pad, `MERGE\n{Economy.MergeCost} -> 1`, Color3.fromRGB(255, 255, 255))
+		Pads.SetLabel(pad, `MERGE\n{Economy.MergeCost} -> 1`, Color3.fromRGB(255, 255, 255))
 	end
 end
 
 function MergeService:Start()
-	HerdUtil.BindPad("MergePad", function(player)
+	Pads.BindPlotPad("MergePad", function(player)
 		MergeService:MergeAll(player)
 		refreshLabel(player)
 	end)

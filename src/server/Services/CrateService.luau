@@ -28,6 +28,8 @@ local HerdUtil = require(script.Parent.HerdUtil)
 local Pricing = require(ReplicatedStorage.Shared.Pricing)
 local Notify = require(script.Parent.Parent.Util.Notify)
 local Debounce = require(script.Parent.Parent.Util.Debounce)
+local PlotService = require(script.Parent.PlotService)
+local Pads = require(script.Parent.Parent.Util.Pads)
 
 local CrateConfig = Economy.Crate
 local CRATE_COLOR = Color3.fromRGB(255, 200, 60)
@@ -168,7 +170,7 @@ local function buildCrate(): BasePart
 end
 
 local function spawnCrate(player: Player): boolean
-	local plot = HerdUtil.GetPlot(player)
+	local plot = PlotService:GetPlot(player)
 	local spawnPart = plot and plot:FindFirstChild("CrateSpawn")
 	if not spawnPart or not spawnPart:IsA("BasePart") then
 		return false
@@ -203,7 +205,7 @@ local function spawnCrate(player: Player): boolean
 		if taken then
 			return
 		end
-		local toucher = HerdUtil.PlayerFromHit(hit)
+		local toucher = Pads.PlayerFromHit(hit, crate)
 		if toucher ~= player then
 			return
 		end

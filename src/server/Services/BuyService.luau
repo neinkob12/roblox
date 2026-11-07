@@ -15,6 +15,8 @@ local DataService = require(script.Parent.DataService)
 local HerdUtil = require(script.Parent.HerdUtil)
 local Pricing = require(ReplicatedStorage.Shared.Pricing)
 local Notify = require(script.Parent.Parent.Util.Notify)
+local PlotService = require(script.Parent.PlotService)
+local Pads = require(script.Parent.Parent.Util.Pads)
 
 local AFFORD_COLOR = Color3.fromRGB(120, 255, 120)
 local POOR_COLOR = Color3.fromRGB(255, 110, 110)
@@ -27,7 +29,7 @@ end
 
 function BuyService:RefreshLabels(player: Player)
 	local data = DataService:Get(player)
-	local plot = HerdUtil.GetPlot(player)
+	local plot = PlotService:GetPlot(player)
 	if not data or not plot then
 		return
 	end
@@ -36,7 +38,7 @@ function BuyService:RefreshLabels(player: Player)
 		if pad then
 			local price = BuyService:Price(data.cowsBought, n)
 			local color = if data.cash >= price then AFFORD_COLOR else POOR_COLOR
-			HerdUtil.SetLabel(pad, `Buy x{n}\n{Format.Cash(price)}`, color)
+			Pads.SetLabel(pad, `Buy x{n}\n{Format.Cash(price)}`, color)
 		end
 	end
 end
@@ -60,7 +62,7 @@ end
 
 function BuyService:Start()
 	for _, n in Economy.BuyPads do
-		HerdUtil.BindPad("BuyPad" .. n, function(player)
+		Pads.BindPlotPad("BuyPad" .. n, function(player)
 			buy(player, n)
 		end)
 	end
