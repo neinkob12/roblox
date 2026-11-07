@@ -16,11 +16,11 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Cows = require(ReplicatedStorage.Shared.Config.Cows)
-local CowModels = require(ReplicatedStorage.Shared.CowModels)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Net = require(ReplicatedStorage.Shared.Net)
 local RevealQueue = require(script.Parent.Parent.Lib.RevealQueue)
 local Theme = require(script.Parent.Parent.UI.Theme)
+local CowViewport = require(script.Parent.Parent.Lib.CowViewport)
 
 local AUTO_CLOSE = 7
 local CLOSE_UNLOCK = 1.0
@@ -177,22 +177,9 @@ local function buildGui(cow: Cows.CowTier)
 	vp.Position = UDim2.fromScale(0.5, 0.47)
 	vp.Size = UDim2.fromScale(0.6, 0.6)
 	vp.BackgroundTransparency = 1
-	vp.Ambient = Color3.fromRGB(170, 170, 180)
-	vp.LightColor = Color3.fromRGB(255, 250, 240)
-	vp.LightDirection = Vector3.new(-1, -1.5, -1)
 	vp.ZIndex = 4
 	vp.Parent = content
-	local cam = Instance.new("Camera")
-	cam.FieldOfView = 40
-	cam.Parent = vp
-	vp.CurrentCamera = cam
-	local model = CowModels.Build(cow.tier)
-	model:PivotTo(CFrame.identity)
-	model.Parent = vp
-	local boxCF, boxSize = model:GetBoundingBox()
-	local center = boxCF.Position
-	local radius = boxSize.Magnitude * 0.5
-	local camDist = radius / math.tan(math.rad(cam.FieldOfView / 2)) * 1.05
+	local stopCow = CowViewport.Mount(vp, cow.tier, { spin = 1.3, bob = 0.2 })
 
 	-- banner
 	local banner = label(content, "Banner", "NEW COW!", UDim2.fromScale(0.85, 0.16), UDim2.fromScale(0.5, -0.2))
@@ -267,10 +254,7 @@ local function buildGui(cow: Cows.CowTier)
 		scale = scale,
 		rays = rays,
 		glow = glow,
-		cam = cam,
-		center = center,
-		camDist = camDist,
-		boxHeight = boxSize.Y,
+		stopCow = stopCow,
 		banner = banner,
 		name = name,
 		nameScale = nameScale,
@@ -358,15 +342,6 @@ local function play(tier: number)
 
 	local conn = RunService.RenderStepped:Connect(function(dt)
 		local t = os.clock() - start
-		-- spin the cow (slight bob of the camera too)
-		local a = t * 1.3
-		local camPos = ui.center
-			+ Vector3.new(
-				math.sin(a) * ui.camDist,
-				ui.boxHeight * 0.25 + math.sin(t * 2) * 0.2,
-				-math.cos(a) * ui.camDist
-			)
-		ui.cam.CFrame = CFrame.lookAt(camPos, ui.center)
 		-- sunburst
 		for i, ray in ui.rays do
 			ray.Rotation = (i - 1) * (180 / RAY_COUNT) + t * 25
@@ -406,6 +381,7 @@ local function play(tier: number)
 		ui.hint.Visible = false
 		task.delay(0.32, function()
 			conn:Disconnect()
+			ui.stopCow()
 			ui.gui:Destroy()
 			done:Fire()
 		end)
