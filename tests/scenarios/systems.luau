@@ -187,9 +187,9 @@ T.eq("hotkeys raise no errors", errorCount(), before)
 T.section("1 hour soak with a big herd (10 fps)")
 before = errorCount()
 H:run(function()
-	local HerdUtil = H:serverModule("Services.HerdUtil")
+	local Rewards = H:serverModule("Util.Rewards")
 	for tier = 1, 8 do
-		HerdUtil.GiveCow(dave, tier, 4)
+		Rewards.Cow(dave, tier, 4)
 	end
 end)
 local crateTouches = 0
