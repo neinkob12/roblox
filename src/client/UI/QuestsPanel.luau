@@ -172,7 +172,7 @@ local function refresh()
 			name = "Reward",
 			text = if q.reward ~= "" then "Reward: " .. q.reward else "",
 			color = Colors.PurpleDark,
-			size = UDim2.new(1, -170, 0, 18),
+			size = UDim2.new(1, -170, 0, 20),
 			position = UDim2.fromOffset(12, 32),
 			align = Enum.TextXAlignment.Left,
 			stroke = 0,
@@ -180,7 +180,7 @@ local function refresh()
 		local bar = Instance.new("Frame")
 		bar.Name = "Bar"
 		bar.BackgroundColor3 = Colors.PanelDark
-		bar.Position = UDim2.fromOffset(12, 54)
+		bar.Position = UDim2.fromOffset(12, 56)
 		bar.Size = UDim2.new(1, -170, 0, 14)
 		bar.Parent = card
 		C.Corner(bar, 7)

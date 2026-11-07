@@ -9,6 +9,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Safe = require(ReplicatedStorage.Shared.Safe)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Cows = require(ReplicatedStorage.Shared.Config.Cows)
 local DataService = require(script.Parent.DataService)
@@ -68,6 +69,7 @@ function MergeService:MergeAll(player: Player, silent: boolean?): number
 	local best = Cows.Get(highestNew)
 	local bestName = if best then best.name else "?"
 	HerdUtil.Notify(player, `MERGED! x{total} (up to {bestName})`, "success")
+	require(ReplicatedStorage.Shared.Net).Event("Fx"):FireClient(player, "merge", { count = total, tier = highestNew })
 	return total
 end
 
@@ -97,10 +99,12 @@ function MergeService:Start()
 		elapsed += 1
 		local autoTick = elapsed % Economy.AutoMergeSeconds == 0
 		for _, player in Players:GetPlayers() do
-			if autoTick and player:GetAttribute("Pass_AutoMerge") == true then
-				MergeService:MergeAll(player, true)
-			end
-			refreshLabel(player)
+			Safe.Run("MergeService tick", function()
+				if autoTick and player:GetAttribute("Pass_AutoMerge") == true then
+					MergeService:MergeAll(player, true)
+				end
+				refreshLabel(player)
+			end)
 		end
 	end
 end

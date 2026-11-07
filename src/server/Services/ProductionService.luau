@@ -96,6 +96,7 @@ local function tickPlayer(player: Player, dt: number)
 		local gained = newValue - current
 		Net.Event("Notify")
 			:FireClient(player, `{rare.name}! x{rare.multiplier} (+{Format.Number(gained)} milk)`, "rare")
+		Net.Event("Fx"):FireClient(player, "rare", { kind = rare.id })
 	end
 end
 
@@ -154,7 +155,7 @@ function ProductionService:Start()
 		local dt = math.min(now - last, Economy.Tank.TickSeconds * 3)
 		last = now
 		for _, player in Players:GetPlayers() do
-			local ok, err = pcall(tickPlayer, player, dt)
+			local ok, err = pcall(tickPlayer :: any, player, dt)
 			if not ok then
 				warn(`[ProductionService] tick failed for {player.Name}: {err}`)
 			end

@@ -16,6 +16,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
+local Safe = require(ReplicatedStorage.Shared.Safe)
 local Net = require(ReplicatedStorage.Shared.Net)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
@@ -114,6 +115,7 @@ local function onDepositTouched(hit: BasePart)
 	if milk > 0 then
 		Net.Event("Notify")
 			:FireClient(player, `Sold {Format.Number(milk)} milk at {string.format("%.2f", price)}x!`, "success")
+		Net.Event("Fx"):FireClient(player, "deposit", { amount = milk })
 	else
 		Net.Event("Notify"):FireClient(player, "Your can is empty! Fill it at your tank tap", "info")
 	end
@@ -138,6 +140,7 @@ local function onCashTouched(hit: BasePart)
 	data.dairyCash = 0
 	DataService:Replicate(player, "dairyCash")
 	DataService:AddCash(player, cash)
+	Net.Event("Fx"):FireClient(player, "cash", { amount = cash })
 	Net.Event("Notify"):FireClient(player, `+{Format.Cash(cash)}`, "success")
 end
 
@@ -304,7 +307,7 @@ local function truckArrive()
 	-- wheel centers = root center and wheel radius is 1.5, so lift the root 1.5 above the stop's top
 	local parked = stop.CFrame * CFrame.new(0, stop.Size.Y / 2 + 1.5, 0)
 	local start = parked * CFrame.new(0, 0, Economy.Truck.DriveDistance) -- comes from behind, drives forward (-Z)
-	root.CFrame = start
+	model:PivotTo(start) -- moves every part; setting root.CFrame alone leaves unparented welded parts behind
 	model.Parent = workspace
 	truckModel = model
 	TweenService:Create(
@@ -399,19 +402,22 @@ function DairyService:Start()
 	-- price + truck + board, once per second
 	task.spawn(function()
 		while true do
-			local nextAt = workspace:GetAttribute("MilkPriceNextAt")
-			if typeof(nextAt) ~= "number" or os.time() >= nextAt then
-				rollPrice()
-			end
-			truckTick()
-			updateBoard()
+			-- each step is protected: one error must never stop prices, the truck or Auto Sell server-wide
+			Safe.Run("DairyService price roll", function()
+				local nextAt = workspace:GetAttribute("MilkPriceNextAt")
+				if typeof(nextAt) ~= "number" or os.time() >= nextAt then
+					rollPrice()
+				end
+			end)
+			Safe.Run("DairyService truck", truckTick)
+			Safe.Run("DairyService board", updateBoard)
 			-- Auto Sell gamepass: deposit the can remotely
 			local now = os.clock()
 			for _, player in Players:GetPlayers() do
 				if player:GetAttribute("Pass_AutoSell") then
 					if not lastAutoSell[player] or now - lastAutoSell[player] >= Economy.Dairy.AutoSellSeconds then
 						lastAutoSell[player] = now
-						DairyService:Deposit(player)
+						Safe.Run("DairyService auto sell", DairyService.Deposit, DairyService, player)
 					end
 				end
 			end
@@ -426,7 +432,7 @@ function DairyService:Start()
 		local now = os.clock()
 		local dt = math.min(now - last, Economy.Dairy.TickSeconds * 4)
 		last = now
-		local ok, err = pcall(sellTick, dt)
+		local ok, err = pcall(sellTick :: any, dt)
 		if not ok then
 			warn(`[DairyService] sell tick failed: {err}`)
 		end

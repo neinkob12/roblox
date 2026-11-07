@@ -35,6 +35,9 @@ jobs:
       - name: Build place (Rojo)
         run: rojo build -o BrainrotCowFarm.rbxlx
 
+      - name: Type check (luau-lsp)
+        run: tools/typecheck.sh
+
       - name: Upload place file
         uses: actions/upload-artifact@v4
         with:

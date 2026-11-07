@@ -10,7 +10,24 @@ local Theme = {}
 Theme.ReferenceSize = Vector2.new(900, 420)
 Theme.MinScale = 0.7
 Theme.MaxScale = 1.6
-Theme.MinTouch = 56 -- reference px; * MinScale (0.79 on iPhone landscape) stays >= 44 real px
+Theme.MinTouch = 64 -- reference px; * MinScale (0.7) = 44.8 real px (iPhone SE landscape is ~0.74)
+
+-- ScreenGui DisplayOrders (C6). Use these instead of magic numbers.
+-- Menu sits above the panel dimmer so switching panels takes one tap.
+Theme.Layers = {
+	Hud = 5,
+	TopStack = 7,
+	Panels = 20,
+	Menu = 25,
+	Popups = 40,
+	Tutorial = 45,
+	Toasts = 50,
+	Reveal = 100, -- crate spin + NEW COW reveal (serialized by Lib/RevealQueue)
+	Trailer = 1000,
+}
+
+-- Width kept free on the right for the side menu (2 x 64 buttons + gap + margins, see Menu).
+Theme.MenuReserve = 160
 
 Theme.Font = Enum.Font.FredokaOne
 Theme.TitleFont = Enum.Font.LuckiestGuy

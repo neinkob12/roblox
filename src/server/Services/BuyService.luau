@@ -8,10 +8,12 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local Safe = require(ReplicatedStorage.Shared.Safe)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
 local HerdUtil = require(script.Parent.HerdUtil)
+local Pricing = require(ReplicatedStorage.Shared.Pricing)
 
 local AFFORD_COLOR = Color3.fromRGB(120, 255, 120)
 local POOR_COLOR = Color3.fromRGB(255, 110, 110)
@@ -19,16 +21,7 @@ local POOR_COLOR = Color3.fromRGB(255, 110, 110)
 local BuyService = {}
 
 function BuyService:Price(cowsBought: number, n: number): number
-	local base = Economy.BuyBasePrice
-	local g = Economy.BuyPriceGrowth
-	local total: number
-	if g == 1 then
-		total = base * n
-	else
-		-- geometric series: base * g^k * (g^n - 1) / (g - 1)
-		total = base * g ^ cowsBought * (g ^ n - 1) / (g - 1)
-	end
-	return math.floor(total + 0.5)
+	return Pricing.Cows(cowsBought, n)
 end
 
 function BuyService:RefreshLabels(player: Player)
@@ -61,6 +54,7 @@ local function buy(player: Player, n: number)
 	DataService:Replicate(player, "cowsBought")
 	HerdUtil.GiveCow(player, 1, n)
 	HerdUtil.Notify(player, `+{n} cow{if n == 1 then "" else "s"}!`, "success")
+	require(ReplicatedStorage.Shared.Net).Event("Fx"):FireClient(player, "buy", { count = n })
 	BuyService:RefreshLabels(player)
 end
 
@@ -73,7 +67,7 @@ function BuyService:Start()
 	-- live prices (cash changes constantly, so a cheap poll is simplest)
 	while true do
 		for _, player in Players:GetPlayers() do
-			BuyService:RefreshLabels(player)
+			Safe.Run("BuyService labels", BuyService.RefreshLabels, BuyService, player)
 		end
 		task.wait(1)
 	end

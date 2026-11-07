@@ -17,14 +17,15 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
+local Safe = require(ReplicatedStorage.Shared.Safe)
 local Net = require(ReplicatedStorage.Shared.Net)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Events = require(ReplicatedStorage.Shared.Config.Events)
 local Cows = require(ReplicatedStorage.Shared.Config.Cows)
 local Format = require(ReplicatedStorage.Shared.Format)
-local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
 local DataService = require(script.Parent.DataService)
 local HerdUtil = require(script.Parent.HerdUtil)
+local Pricing = require(ReplicatedStorage.Shared.Pricing)
 
 local CrateConfig = Economy.Crate
 local CRATE_COLOR = Color3.fromRGB(255, 200, 60)
@@ -36,16 +37,7 @@ local worldCrates: { [Player]: { BasePart } } = {}
 local crateFolder: Folder
 
 function CrateService:BuyPrice(player: Player): number
-	local data = DataService:Get(player)
-	if not data then
-		return CrateConfig.BuyBasePrice
-	end
-	local mps = Multipliers.MilkPerSecond(player, data)
-	if CrateConfig.PriceUsesCashMultiplier then
-		mps *= Multipliers.Cash(player, data)
-	end
-	local price = math.max(CrateConfig.BuyBasePrice, mps * CrateConfig.BuyPriceSecondsOfProduction)
-	return math.floor(price * (CrateConfig.BuyPriceGrowth or 1) ^ (data.cratesBought or 0))
+	return Pricing.Crate(player, DataService:Get(player))
 end
 
 function CrateService:Roll(bestTier: number, shift: number): number
@@ -222,6 +214,7 @@ local function spawnCrate(player: Player): boolean
 		data.crates += 1
 		DataService:Replicate(player, "crates")
 		HerdUtil.Notify(player, "Picked up a Mystery Milk Crate!", "rare")
+		Net.Event("Fx"):FireClient(player, "crate", { position = crate.Position })
 		removeCrate(player, crate)
 	end)
 	HerdUtil.Notify(player, "A Mystery Milk Crate dropped on your farm!", "rare")
@@ -278,7 +271,7 @@ function CrateService:Start()
 	end)
 	while true do
 		task.wait(CrateConfig.DropCheckSeconds)
-		rollDrops()
+		Safe.Run("CrateService drops", rollDrops)
 	end
 end
 

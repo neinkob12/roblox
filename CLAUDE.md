@@ -18,7 +18,8 @@ This is a Roblox game (Luau, Rojo). Several Claude sessions on two accounts buil
 - Services: `ModuleScript` returning a table with optional `:Init()` and `:Start()` (auto-loaded, see CONTRACTS section 2).
 - Server-authoritative: the client only sends requests through remotes declared in `src/shared/Net.luau`. Validate everything on the server.
 - Player state lives ONLY in `DataService`. Cash changes only via `DataService:AddCash` / `DataService:SpendCash`.
-- All multipliers go through `src/shared/Multipliers.luau`. All tunable numbers go in `src/shared/Config/*`.
+- All multipliers go through `src/shared/Multipliers.luau`, all prices through `src/shared/Pricing.luau`. All tunable numbers go in `src/shared/Config/*`.
+- Loops that must survive errors use `Safe.Run(label, fn, ...)` (`src/shared/Safe.luau`), never a hand-written pcall + warn.
 - Big numbers are shown via `Format.Number` / `Format.Cash`.
 - Mobile-first UI: minimum touch target 44px, use `UIScale` / `Scale` sizing, and test in Studio's device emulator (iPhone landscape).
 - No Toolbox/free models (backdoor risk). Build models from Parts in code. No external HTTP.
