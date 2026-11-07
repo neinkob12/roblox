@@ -67,7 +67,7 @@ end
 -- why a new egg can't be placed right now (nil = it can)
 local function placeBlocker(data: any): string?
 	if PetService:Count(data) + occupiedCount(data) >= Pets.MaxInventory then
-		return `Your pet inventory is full ({Pets.MaxInventory})! Merge some pets first.`
+		return `Your pet inventory is full ({Pets.MaxInventory})! Merge or release some pets first.`
 	end
 	if not freeNest(data) then
 		return "All your nests are busy! Hatch an egg first."
@@ -193,7 +193,11 @@ local function onHatch(player: Player, key: any)
 		return
 	end
 	if PetService:Count(data) >= Pets.MaxInventory then
-		Notify.To(player, `Your pet inventory is full ({Pets.MaxInventory})! Merge some pets first.`, "error")
+		Notify.To(
+			player,
+			`Your pet inventory is full ({Pets.MaxInventory})! Merge or release some pets first.`,
+			"error"
+		)
 		return
 	end
 	local luck = math.clamp(tonumber(nest.luck) or 0, 0, Pets.LuckCap)

@@ -20,6 +20,9 @@
 --   RequestEquipPet(petUid: string, equip: boolean)
 --   RequestMergePets(petId: string, variant: string)  5 of id+variant -> 1 of the next variant.
 --       Unequipped copies are used first; if an equipped copy was used, the new pet is equipped.
+--   RequestReleasePets(petUids: { string })  removes up to Pets.MaxReleasePerRequest owned pets.
+--       Equipped, unknown and other players' uids are skipped. No refund. Released pets stay in
+--       petIndex (index bonus is permanent). Frees inventory space so eggs can be placed again.
 --
 -- API (server):
 --   PetService:AddPet(player, petId, variant) -> uid?    inventory cap checked, index updated
@@ -212,9 +215,47 @@ local function onMerge(player: Player, petId: any, variant: any)
 	Notify.To(player, `Merged into a {Pets.VariantById[nextVariant].name} {pet.name}!`, "rare")
 end
 
+local function onRelease(player: Player, uids: any)
+	if typeof(uids) ~= "table" then
+		return
+	end
+	-- a plain array of strings, at most MaxReleasePerRequest long
+	local n = 0
+	for key in uids do
+		n += 1
+		if typeof(key) ~= "number" or n > Pets.MaxReleasePerRequest then
+			return
+		end
+	end
+	if n ~= #uids then
+		return
+	end
+	if not Debounce.Try(player, "releasePets", 0.5) then
+		return
+	end
+	local data = DataService:Get(player)
+	if not data then
+		return
+	end
+	local released = 0
+	for _, uid in uids do
+		if typeof(uid) == "string" and data.pets[uid] and not table.find(data.equippedPets, uid) then
+			data.pets[uid] = nil
+			released += 1
+		end
+	end
+	if released == 0 then
+		Notify.To(player, "No pets released (equipped pets can't be released).", "error")
+		return
+	end
+	DataService:Replicate(player, "pets")
+	Notify.To(player, `Released {released} pet{if released == 1 then "" else "s"}`, "success")
+end
+
 function PetService:Start()
 	Net.Event("RequestEquipPet").OnServerEvent:Connect(onEquip)
 	Net.Event("RequestMergePets").OnServerEvent:Connect(onMerge)
+	Net.Event("RequestReleasePets").OnServerEvent:Connect(onRelease)
 	DataService.PlayerLoaded:Connect(function(player, data)
 		repair(data)
 		DataService:Replicate(player, "pets")

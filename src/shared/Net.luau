@@ -31,6 +31,7 @@ local EVENTS = {
 	"RequestHatch", -- (nestKey: string) hatch a ready egg in that nest
 	"RequestEquipPet", -- (petUid: string, equip: boolean)
 	"RequestMergePets", -- (petId: string, variant: string) 5 same -> next variant
+	"RequestReleasePets", -- (petUids: { string }) release up to 50 owned, unequipped pets (no refund; index kept)
 	"PetHatched", -- server -> client (petUid: string, petId: string, variant: string) for the reveal
 	"RequestTutorialStep", -- (step: number) C4 TutorialService validates (only forward, max +1)
 	"RequestDailyClaim", -- () E1 DailyService: claim today's login reward (20h cooldown, 48h streak reset)

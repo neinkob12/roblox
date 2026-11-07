@@ -257,10 +257,59 @@ H:fireServer(alice, "RequestClaimFreeEgg")
 H:step()
 T.eq("full inventory: free egg refused", count(aData.nests), 0)
 
+---------------------------------------------------------------- release (inventory deadlock fix)
+T.section("release pets")
+local equippedUid = aData.equippedPets[1]
+local freeUids = {}
+for u, p in aData.pets do
+	if p.id == "latte" and not table.find(aData.equippedPets, u) then
+		table.insert(freeUids, u)
+	end
+end
+table.sort(freeUids)
+T.check("Alice has unequipped lattes", #freeUids >= 5, tostring(#freeUids))
+H:advance(0.6)
+H:fireServer(bob2, "RequestReleasePets", { freeUids[1], freeUids[2] })
+H:step()
+T.eq("Bob can't release Alice's pets", count(aData.pets), Pets.MaxInventory)
+H:advance(0.6)
+H:fireServer(alice, "RequestReleasePets", { equippedUid })
+H:step()
+T.check("equipped pet can't be released", aData.pets[equippedUid] ~= nil)
+H:advance(0.6)
+H:clearReceived(alice)
+H:fireServer(alice, "RequestReleasePets", { freeUids[1], freeUids[2], freeUids[3], freeUids[4], freeUids[5], freeUids[5], equippedUid })
+H:step(2)
+T.eq("released exactly 5 (duplicate and equipped skipped)", count(aData.pets), Pets.MaxInventory - 5)
+T.check("equipped pet survives a mixed release", aData.pets[equippedUid] ~= nil)
+T.check("released pets stay in the index", aData.petIndex["latte:normal"] == true)
+local toasts = H:received(alice, "Notify")
+T.check("toast says Released 5 pets", #toasts > 0 and toasts[#toasts].args[1] == "Released 5 pets", toasts[#toasts] and tostring(toasts[#toasts].args[1]))
+H:advance(0.6)
+H:fireServer(alice, "RequestClaimFreeEgg")
+H:step()
+T.eq("after releasing, the free egg works again", count(aData.nests), 1)
+H:advance(0.6)
+local tooMany = {}
+for i = 1, Pets.MaxReleasePerRequest + 1 do
+	tooMany[i] = freeUids[6] or "x"
+end
+H:fireServer(alice, "RequestReleasePets", tooMany)
+H:step()
+T.eq("more than 50 uids is refused", count(aData.pets), Pets.MaxInventory - 5)
+local before = #H:errors()
+for _, arg in { nil, 1, "x", true, { 1, 2 }, { {} }, { a = freeUids[6] }, { [1] = freeUids[6], [3] = "y" }, { alice }, { 0 / 0 } } do
+	H:advance(0.6)
+	H:fireServer(alice, "RequestReleasePets", arg)
+end
+H:advance(1)
+T.eq("garbage release args raise no errors", #H:errors(), before)
+T.eq("garbage release args release nothing", count(aData.pets), Pets.MaxInventory - 5)
+
 ---------------------------------------------------------------- fuzz
 T.section("remote fuzz")
 local errorsBefore = #H:errors()
-for _, name in { "RequestBuyEgg", "RequestClaimFreeEgg", "RequestHatch", "RequestEquipPet", "RequestMergePets" } do
+for _, name in { "RequestBuyEgg", "RequestClaimFreeEgg", "RequestHatch", "RequestEquipPet", "RequestMergePets", "RequestReleasePets" } do
 	for _, arg in { nil, 1e308, -1, 0 / 0, "x", "1", true, {}, alice, string.rep("A", 500) } do
 		H:fireServer(bob2, name, arg, arg)
 		H:advance(0.35)
