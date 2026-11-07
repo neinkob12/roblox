@@ -107,7 +107,7 @@ local function assign(player: Player)
 		return
 	end
 	for _, plot in sortedPlots() do
-		if ownerOf[plot] == nil then
+		if not ownerOf[plot] then
 			ownerOf[plot] = player
 			plotOf[player] = plot
 			plot:SetAttribute("OwnerUserId", player.UserId)
@@ -162,7 +162,7 @@ end
 
 function PlotService:Start()
 	for _, plot in sortedPlots() do
-		if ownerOf[plot] == nil then
+		if not ownerOf[plot] then
 			plot:SetAttribute("OwnerUserId", 0)
 			setSign(plot, FREE_SIGN_TEXT)
 		end

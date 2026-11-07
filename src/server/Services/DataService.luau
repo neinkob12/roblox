@@ -40,7 +40,8 @@ end
 local TEMPLATE = {
 	cash = Economy.StartingCash,
 	totalCashEarned = 0,
-	cows = startingCows(), -- { ["1"] = 3, ["2"] = 1, ... }
+	cows = {}, -- { ["1"] = 3, ["2"] = 1, ... }  starting cows are seeded on first join only:
+	-- a template default would be re-added by Reconcile after merging it away (free cow per rejoin)
 	cowsBought = 0, -- this rebirth, drives buy price
 	cratesBought = 0, -- this rebirth, drives crate price (Economy.Crate.BuyPriceGrowth)
 	tankMilk = 0,
@@ -61,6 +62,7 @@ local TEMPLATE = {
 	boosts = {} :: { [string]: { kind: string, mult: number, expires: number } },
 	quests = {} :: { [string]: any }, -- QuestService owns the shape
 	redeemedCodes = {} :: { [string]: boolean },
+	purchases = {} :: { string }, -- last receipt PurchaseIds (MonetizationService idempotency)
 	settings = { music = true, sfx = true, voice = true, reduceMotion = false },
 	stats = { milkSold = 0, merges = 0, cratesOpened = 0, playSeconds = 0 },
 	lastOnline = 0, -- os.time() of last save, used for offline earnings
@@ -73,10 +75,8 @@ DataService.PlayerLoaded = Signal.new()
 DataService.PlayerSaving = Signal.new()
 DataService.Template = TEMPLATE
 
-local store = ProfileStore.New(STORE_NAME, TEMPLATE)
-if RunService:IsStudio() and USE_MOCK_IN_STUDIO then
-	store = store.Mock
-end
+local liveStore = ProfileStore.New(STORE_NAME, TEMPLATE)
+local store = if RunService:IsStudio() and USE_MOCK_IN_STUDIO then liveStore.Mock else liveStore
 
 local profiles: { [Player]: any } = {}
 
@@ -112,6 +112,7 @@ local function onPlayerAdded(player: Player)
 	end
 	if profile.Data.firstJoin == 0 then
 		profile.Data.firstJoin = os.time()
+		profile.Data.cows = DataService:NewStartingCows()
 	end
 	profiles[player] = profile
 
@@ -209,9 +210,18 @@ function DataService:Replicate(player: Player, key: string)
 	replicate(player, key)
 end
 
+local function isBadNumber(n: number): boolean
+	return n ~= n or n == math.huge or n == -math.huge
+end
+
+-- Starting herd for brand-new players, after a rebirth and after /reset.
+function DataService:NewStartingCows(): { [string]: number }
+	return startingCows()
+end
+
 function DataService:AddCash(player: Player, amount: number)
 	local profile = profiles[player]
-	if not profile or amount ~= amount then
+	if not profile or isBadNumber(amount) then
 		return
 	end
 	profile.Data.cash += amount
@@ -223,7 +233,7 @@ end
 
 function DataService:SpendCash(player: Player, amount: number): boolean
 	local profile = profiles[player]
-	if not profile or amount < 0 or profile.Data.cash < amount then
+	if not profile or isBadNumber(amount) or amount < 0 or profile.Data.cash < amount then
 		return false
 	end
 	profile.Data.cash -= amount

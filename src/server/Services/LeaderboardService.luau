@@ -322,7 +322,7 @@ function LeaderboardService:Start()
 
 	while true do
 		for _, board in boards do
-			local ok, err = pcall(refresh, board)
+			local ok, err = pcall(refresh :: any, board)
 			if not ok then
 				warn(`[LeaderboardService] refresh failed: {err}`)
 			end
@@ -336,7 +336,7 @@ function LeaderboardService:Start()
 		for _, player in players do
 			if player.Parent == Players then
 				for _, board in boards do
-					local ok, err = pcall(write, board, player)
+					local ok, err = pcall(write :: any, board, player)
 					if not ok then
 						warn(`[LeaderboardService] write failed: {err}`)
 					end

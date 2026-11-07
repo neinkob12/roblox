@@ -304,7 +304,7 @@ local function truckArrive()
 	-- wheel centers = root center and wheel radius is 1.5, so lift the root 1.5 above the stop's top
 	local parked = stop.CFrame * CFrame.new(0, stop.Size.Y / 2 + 1.5, 0)
 	local start = parked * CFrame.new(0, 0, Economy.Truck.DriveDistance) -- comes from behind, drives forward (-Z)
-	root.CFrame = start
+	model:PivotTo(start) -- moves every part; setting root.CFrame alone leaves unparented welded parts behind
 	model.Parent = workspace
 	truckModel = model
 	TweenService:Create(
@@ -399,19 +399,34 @@ function DairyService:Start()
 	-- price + truck + board, once per second
 	task.spawn(function()
 		while true do
-			local nextAt = workspace:GetAttribute("MilkPriceNextAt")
-			if typeof(nextAt) ~= "number" or os.time() >= nextAt then
-				rollPrice()
+			-- each step is protected: one error must never stop prices, the truck or Auto Sell server-wide
+			local ok, err = pcall(function()
+				local nextAt = workspace:GetAttribute("MilkPriceNextAt")
+				if typeof(nextAt) ~= "number" or os.time() >= nextAt then
+					rollPrice()
+				end
+			end)
+			if not ok then
+				warn(`[DairyService] price roll failed: {err}`)
 			end
-			truckTick()
-			updateBoard()
+			ok, err = pcall(truckTick)
+			if not ok then
+				warn(`[DairyService] truck tick failed: {err}`)
+			end
+			ok, err = pcall(updateBoard)
+			if not ok then
+				warn(`[DairyService] board update failed: {err}`)
+			end
 			-- Auto Sell gamepass: deposit the can remotely
 			local now = os.clock()
 			for _, player in Players:GetPlayers() do
 				if player:GetAttribute("Pass_AutoSell") then
 					if not lastAutoSell[player] or now - lastAutoSell[player] >= Economy.Dairy.AutoSellSeconds then
 						lastAutoSell[player] = now
-						DairyService:Deposit(player)
+						local sold, sellErr = pcall(DairyService.Deposit, DairyService, player)
+						if not sold then
+							warn(`[DairyService] auto sell failed for {player.Name}: {sellErr}`)
+						end
 					end
 				end
 			end
@@ -426,7 +441,7 @@ function DairyService:Start()
 		local now = os.clock()
 		local dt = math.min(now - last, Economy.Dairy.TickSeconds * 4)
 		last = now
-		local ok, err = pcall(sellTick, dt)
+		local ok, err = pcall(sellTick :: any, dt)
 		if not ok then
 			warn(`[DairyService] sell tick failed: {err}`)
 		end

@@ -51,7 +51,7 @@ local function pump()
 			if not item then
 				break
 			end
-			local ok, err = pcall(item.fn)
+			local ok, err = pcall(item.fn :: any)
 			if not ok then
 				warn(`[RevealQueue] reveal failed: {err}`)
 			end
