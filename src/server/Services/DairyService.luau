@@ -17,6 +17,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local Safe = require(ReplicatedStorage.Shared.Safe)
+local Net = require(ReplicatedStorage.Shared.Net)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
@@ -87,6 +88,7 @@ local function onDeposit(player: Player)
 	local milk = DairyService:Deposit(player)
 	if milk > 0 then
 		Notify.To(player, `Sold {Format.Number(milk)} milk at {string.format("%.2f", price)}x!`, "success")
+		Net.Event("Fx"):FireClient(player, "deposit", { amount = milk })
 	else
 		Notify.To(player, "Your can is empty! Fill it at your tank tap", "info")
 	end
@@ -107,6 +109,7 @@ local function onCollect(player: Player)
 	data.dairyCash = 0
 	DataService:Replicate(player, "dairyCash")
 	DataService:AddCash(player, cash)
+	Net.Event("Fx"):FireClient(player, "cash", { amount = cash })
 	Notify.To(player, `+{Format.Cash(cash)}`, "success")
 end
 

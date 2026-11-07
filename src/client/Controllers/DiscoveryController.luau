@@ -5,7 +5,8 @@
 -- Sequence: white flash -> dark backdrop + spinning sunburst -> "NEW COW!" banner drops in ->
 -- rotating cow model (ViewportFrame) pops up -> huge cow name slams in -> confetti burst.
 -- Tap/click anywhere to close (after a short delay) or it closes itself after AUTO_CLOSE seconds.
--- Several discoveries in a row (merge-all) are queued and shown one after another.
+-- Several discoveries in a row (merge-all) are queued and shown one after another, through the
+-- shared client RevealQueue (C6) so they never overlap a crate spin.
 --
 -- Public: DiscoveryController:Show(tier) queues a reveal (for the index UI, admin, trailer).
 
@@ -18,6 +19,8 @@ local Cows = require(ReplicatedStorage.Shared.Config.Cows)
 local CowModels = require(ReplicatedStorage.Shared.CowModels)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Net = require(ReplicatedStorage.Shared.Net)
+local RevealQueue = require(script.Parent.Parent.Lib.RevealQueue)
+local Theme = require(script.Parent.Parent.UI.Theme)
 
 local AUTO_CLOSE = 7
 local CLOSE_UNLOCK = 1.0
@@ -33,9 +36,6 @@ local CONFETTI_COLORS = {
 }
 
 local DiscoveryController = {}
-
-local queue: { number } = {}
-local playing = false
 
 local function tween(
 	inst: Instance,
@@ -88,7 +88,7 @@ local function buildGui(cow: Cows.CowTier)
 	gui.Name = "DiscoveryReveal"
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
-	gui.DisplayOrder = 100
+	gui.DisplayOrder = Theme.Layers.Reveal
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 	-- whole screen is the close button (big touch target on phones)
@@ -421,30 +421,14 @@ local function play(tier: number)
 	done:Destroy()
 end
 
-local function pump()
-	if playing then
-		return
-	end
-	playing = true
-	task.spawn(function()
-		while #queue > 0 do
-			local tier = table.remove(queue, 1) :: number
-			local ok, err = pcall(play :: any, tier)
-			if not ok then
-				warn(`[DiscoveryController] reveal failed: {err}`)
-			end
-			task.wait(0.15)
-		end
-		playing = false
-	end)
-end
-
 function DiscoveryController:Show(tier: number)
 	if type(tier) ~= "number" or not Cows.Get(tier) then
 		return
 	end
-	table.insert(queue, tier)
-	pump()
+	-- shared full-screen queue (C6): waits for a running crate spin, priority after spins
+	RevealQueue.Push(function()
+		play(tier)
+	end, 10)
 end
 
 function DiscoveryController:Init()

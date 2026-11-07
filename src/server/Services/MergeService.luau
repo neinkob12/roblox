@@ -17,6 +17,7 @@ local Notify = require(script.Parent.Parent.Util.Notify)
 local PlotService = require(script.Parent.PlotService)
 local Pads = require(script.Parent.Parent.Util.Pads)
 local Rewards = require(script.Parent.Parent.Util.Rewards)
+local Net = require(ReplicatedStorage.Shared.Net)
 
 local MergeService = {}
 
@@ -72,6 +73,7 @@ function MergeService:MergeAll(player: Player, silent: boolean?): number
 	local best = Cows.Get(highestNew)
 	local bestName = if best then best.name else "?"
 	Notify.To(player, `MERGED! x{total} (up to {bestName})`, "success")
+	Net.Event("Fx"):FireClient(player, "merge", { count = total, tier = highestNew })
 	return total
 end
 

@@ -63,7 +63,7 @@ function UpgradesPanel:Init()
 	local _, body = C.Panel("Upgrades", "UPGRADES", Vector2.new(560, 360), Colors.Green)
 	local list = C.ScrollList(body, 8)
 	for i, u in Upgrades.List do
-		local card = C.Card(list, 72, i)
+		local card = C.Card(list, 84, i)
 		C.Label(card, {
 			name = "Name",
 			text = u.name,
@@ -86,8 +86,8 @@ function UpgradesPanel:Init()
 			name = "Effect",
 			text = u.description,
 			color = Colors.GreyDark,
-			size = UDim2.new(1, -170, 0, 34),
-			position = UDim2.fromOffset(12, 32),
+			size = UDim2.new(1, -170, 0, 44),
+			position = UDim2.fromOffset(12, 34),
 			align = Enum.TextXAlignment.Left,
 			stroke = 0,
 		})

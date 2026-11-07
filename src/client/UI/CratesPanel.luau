@@ -5,7 +5,8 @@
 --   (the MilkPerSecond player attribute already includes the multipliers).
 --   Spin: on CrateOpened(tier, source) a reel of colored cow cards scrolls and lands on the
 --   result, then the real cow model (CowModels.Build in a ViewportFrame) pops up.
---   Several results in a row are queued.
+--   Several results in a row are queued in the shared RevealQueue (C6), so a "NEW COW!"
+--   discovery from the same crate plays after the spin instead of on top of it.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -17,6 +18,7 @@ local Pricing = require(ReplicatedStorage.Shared.Pricing)
 local Cows = require(ReplicatedStorage.Shared.Config.Cows)
 local CowModels = require(ReplicatedStorage.Shared.CowModels)
 local Theme = require(script.Parent.Theme)
+local RevealQueue = require(script.Parent.Parent.Lib.RevealQueue)
 local C = require(script.Parent.Components)
 local Menu = require(script.Parent.Menu)
 local DataController = require(script.Parent.Parent.Controllers.DataController)
@@ -38,8 +40,6 @@ local openBtn: TextButton
 local buyBtn: TextButton
 local buyCaption: TextLabel
 
-local spinQueue: { { tier: number, source: string } } = {}
-local spinning = false
 local spinRoot: Frame
 
 local function buyPrice(): number
@@ -278,25 +278,6 @@ local function playSpin(tier: number, source: string)
 	close()
 end
 
-local function pump()
-	if spinning then
-		return
-	end
-	spinning = true
-	task.spawn(function()
-		while #spinQueue > 0 do
-			local item = table.remove(spinQueue, 1)
-			if item then
-				local ok, err = pcall(playSpin :: any, item.tier, item.source)
-				if not ok then
-					warn(`[CratesPanel] spin failed: {err}`)
-				end
-			end
-		end
-		spinning = false
-	end)
-end
-
 ------------------------------------------------------------------------------ panel
 
 function CratesPanel:Init()
@@ -355,7 +336,7 @@ function CratesPanel:Init()
 		end,
 	})
 
-	local _, root = C.Screen("CrateSpin", 110)
+	local _, root = C.Screen("CrateSpin", Theme.Layers.Reveal)
 	spinRoot = root
 end
 
@@ -369,8 +350,10 @@ function CratesPanel:Start()
 		if typeof(tier) ~= "number" or not Cows.Get(tier) then
 			return
 		end
-		table.insert(spinQueue, { tier = tier, source = if typeof(source) == "string" then source else "crate" })
-		pump()
+		local src = if typeof(source) == "string" then source else "crate"
+		RevealQueue.Push(function()
+			playSpin(tier, src)
+		end, 0)
 	end)
 	refresh()
 end

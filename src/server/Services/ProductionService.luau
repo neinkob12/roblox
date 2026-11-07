@@ -75,6 +75,7 @@ local function tickPlayer(player: Player, dt: number)
 	if rare then
 		local gained = newValue - current
 		Notify.To(player, `{rare.name}! x{rare.multiplier} (+{Format.Number(gained)} milk)`, "rare")
+		Net.Event("Fx"):FireClient(player, "rare", { kind = rare.id })
 	end
 end
 

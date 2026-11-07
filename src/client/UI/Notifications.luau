@@ -11,6 +11,7 @@ local Net = require(ReplicatedStorage.Shared.Net)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Theme = require(script.Parent.Theme)
 local C = require(script.Parent.Components)
+local TopStack = require(script.Parent.TopStack)
 
 local Colors = Theme.Colors
 
@@ -187,7 +188,7 @@ local function welcomeBack(milk: number, seconds: number)
 end
 
 function Notifications:Init()
-	local _, r = C.Screen("Notifications", 50)
+	local _, r = C.Screen("Notifications", Theme.Layers.Toasts)
 	root = r
 	stack = Instance.new("Frame")
 	stack.Name = "Stack"
@@ -199,8 +200,14 @@ function Notifications:Init()
 	stack.Parent = root
 	local l = C.List(stack, 6)
 	l.VerticalAlignment = Enum.VerticalAlignment.Top
+	-- toasts sit right under the top-center banner stack (C6)
+	local function place()
+		stack.Position = UDim2.new(0.5, 0, 0, TopStack.Bottom() + 8)
+	end
+	TopStack.Changed:Connect(place)
+	place()
 
-	local _, p = C.Screen("Popups", 40)
+	local _, p = C.Screen("Popups", Theme.Layers.Popups)
 	popupRoot = p
 
 	Net.Event("Notify").OnClientEvent:Connect(function(text: string, kind: string)

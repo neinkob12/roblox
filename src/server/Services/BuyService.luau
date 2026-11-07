@@ -17,6 +17,7 @@ local Notify = require(script.Parent.Parent.Util.Notify)
 local PlotService = require(script.Parent.PlotService)
 local Pads = require(script.Parent.Parent.Util.Pads)
 local Rewards = require(script.Parent.Parent.Util.Rewards)
+local Net = require(ReplicatedStorage.Shared.Net)
 
 local AFFORD_COLOR = Color3.fromRGB(120, 255, 120)
 local POOR_COLOR = Color3.fromRGB(255, 110, 110)
@@ -57,6 +58,7 @@ local function buy(player: Player, n: number)
 	DataService:Replicate(player, "cowsBought")
 	Rewards.Cow(player, 1, n)
 	Notify.To(player, `+{n} cow{if n == 1 then "" else "s"}!`, "success")
+	Net.Event("Fx"):FireClient(player, "buy", { count = n })
 	BuyService:RefreshLabels(player)
 end
 

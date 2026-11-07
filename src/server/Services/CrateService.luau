@@ -228,6 +228,7 @@ local function spawnCrate(player: Player): boolean
 		spin:Cancel()
 		Rewards.Crates(player, 1)
 		Notify.To(player, "Picked up a Mystery Milk Crate!", "rare")
+		Net.Event("Fx"):FireClient(player, "crate", { position = crate.Position })
 		removeCrate(player, crate)
 	end)
 	Notify.To(player, "A Mystery Milk Crate dropped on your farm!", "rare")
