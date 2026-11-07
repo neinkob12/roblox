@@ -31,12 +31,18 @@ local function getCtx(player: Player, data: any): Ctx
 	local step = data.tutorialStep or 0
 	local ctx = ctxs[player]
 	if ctx == nil or ctx.step ~= step then
-		ctx = {
+		local baseEarned = data.totalCashEarned or 0
+		local def = Tutorial.Steps[step]
+		if def and def.carryCollect and ctx and ctx.step == step - 1 and ctx.baseEarned then
+			baseEarned = ctx.baseEarned -- keep counting from the start of the previous step
+		end
+		local fresh: Ctx = {
 			step = step,
 			startedAt = os.clock(),
-			baseEarned = data.totalCashEarned or 0,
+			baseEarned = baseEarned,
 		}
-		ctxs[player] = ctx
+		ctxs[player] = fresh
+		return fresh
 	end
 	return ctx
 end
