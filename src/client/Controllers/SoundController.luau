@@ -64,6 +64,10 @@ function SoundController:Play(name: string, parent: Instance?): Sound?
 	if not enabled[def.group] then
 		return nil
 	end
+	-- one-shots only: music and loops are owned by this controller (playlist, pipe loop)
+	if def.looped or def.group == "Music" then
+		return nil
+	end
 	-- never stack the exact same sound in the same frame burst
 	local now = os.clock()
 	if now - (lastPlayed[name] or 0) < 0.06 then
@@ -76,16 +80,14 @@ function SoundController:Play(name: string, parent: Instance?): Sound?
 		return nil
 	end
 	s:Play()
-	if not def.looped then
-		s.Ended:Once(function()
+	s.Ended:Once(function()
+		s:Destroy()
+	end)
+	task.delay(15, function()
+		if s.Parent then
 			s:Destroy()
-		end)
-		task.delay(15, function()
-			if s.Parent then
-				s:Destroy()
-			end
-		end)
-	end
+		end
+	end)
 	return s
 end
 
