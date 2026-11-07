@@ -17,6 +17,7 @@ local Events = require(ReplicatedStorage.Shared.Config.Events)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Theme = require(script.Parent.Theme)
 local C = require(script.Parent.Components)
+local TopStack = require(script.Parent.TopStack)
 local DataController = require(script.Parent.Parent.Controllers.DataController)
 
 local player = Players.LocalPlayer
@@ -182,10 +183,10 @@ local function buildTop()
 	local l = C.List(boostList, 4, false, Enum.HorizontalAlignment.Left)
 	l.VerticalAlignment = Enum.VerticalAlignment.Top
 
+	-- event + truck share the reserved top-center stack (C6) so they never overlap
 	eventChip = chip(root, "Event", Vector2.new(260, 34))
-	eventChip.AnchorPoint = Vector2.new(0.5, 0)
-	eventChip.Position = UDim2.new(0.5, 0, 0, 8)
 	eventChip.Visible = false
+	TopStack.Add(eventChip, 10)
 	eventText = C.Label(eventChip, {
 		name = "Text",
 		text = "",
@@ -195,9 +196,8 @@ local function buildTop()
 	})
 
 	truckBanner = chip(root, "Truck", Vector2.new(300, 34), Colors.Orange)
-	truckBanner.AnchorPoint = Vector2.new(0.5, 0)
-	truckBanner.Position = UDim2.new(0.5, 0, 0, 48)
 	truckBanner.Visible = false
+	TopStack.Add(truckBanner, 20)
 	truckText = C.Label(truckBanner, {
 		name = "Text",
 		text = "",

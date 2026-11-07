@@ -314,6 +314,20 @@ end
 
 type PanelEntry = { frame: Frame, scale: UIScale, opened: { () -> () } }
 
+-- C6: shrink a panel that would not fit the screen (tiny phones where UIScale hits MinScale).
+local function fitScale(frame: Frame): number
+	local parent = frame.Parent
+	if not parent or not parent:IsA("GuiObject") then
+		return 1
+	end
+	local avail = (parent :: GuiObject).Size
+	local w, h = frame.Size.X.Offset, frame.Size.Y.Offset
+	if w <= 0 or h <= 0 or avail.X.Offset <= 0 or avail.Y.Offset <= 0 then
+		return 1
+	end
+	return math.min(1, (avail.X.Offset - 16) / w, (avail.Y.Offset - 24) / h)
+end
+
 local panels: { [string]: PanelEntry } = {}
 local pendingOpenFns: { [string]: { () -> () } } = {}
 local openName: string? = nil
@@ -350,7 +364,7 @@ function Components.Panel(name: string, title: string, size: Vector2, color: Col
 	local frame = Instance.new("Frame")
 	frame.Name = name
 	frame.AnchorPoint = Vector2.new(0.5, 0.5)
-	frame.Position = UDim2.fromScale(0.5, 0.52)
+	frame.Position = UDim2.fromScale(0.5, 0.5)
 	frame.Size = UDim2.fromOffset(size.X, size.Y)
 	frame.BackgroundColor3 = Theme.Colors.Panel
 	frame.Visible = false
@@ -471,8 +485,9 @@ function Components.OpenPanel(name: string)
 	end
 	openName = name
 	entry.frame.Visible = true
-	entry.scale.Scale = 0.6
-	Components.Tween(entry.scale, 0.25, { Scale = 1 }, Enum.EasingStyle.Back)
+	local target = fitScale(entry.frame)
+	entry.scale.Scale = 0.6 * target
+	Components.Tween(entry.scale, 0.25, { Scale = target }, Enum.EasingStyle.Back)
 	if dim then
 		dim.Visible = true
 		Components.Tween(dim, 0.2, { BackgroundTransparency = 0.45 })

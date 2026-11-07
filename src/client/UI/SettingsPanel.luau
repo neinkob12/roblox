@@ -19,6 +19,7 @@ local TOGGLES = {
 }
 
 local REDEEM_TIMEOUT = 8
+local ROW_H = Theme.MinTouch + 6
 
 local SettingsPanel = {}
 
@@ -99,16 +100,16 @@ local function redeem()
 end
 
 function SettingsPanel:Init()
-	local _, body = C.Panel("Settings", "SETTINGS", Vector2.new(480, 340), Colors.Grey)
+	local _, body = C.Panel("Settings", "SETTINGS", Vector2.new(480, 370), Colors.Grey)
 
 	for i, def in TOGGLES do
-		local y = (i - 1) * 62
+		local y = (i - 1) * ROW_H
 		C.Label(body, {
 			name = def.key .. "Label",
 			text = def.label,
 			color = Colors.TextDark,
 			size = UDim2.fromOffset(260, 34),
-			position = UDim2.fromOffset(8, y + 11),
+			position = UDim2.fromOffset(8, y + 15),
 			align = Enum.TextXAlignment.Left,
 			stroke = 0,
 		})
@@ -131,7 +132,7 @@ function SettingsPanel:Init()
 	end
 
 	-- code redeem
-	local y = #TOGGLES * 62 + 8
+	local y = #TOGGLES * ROW_H + 8
 	local boxFrame = Instance.new("Frame")
 	boxFrame.Name = "CodeFrame"
 	boxFrame.BackgroundColor3 = Colors.Card

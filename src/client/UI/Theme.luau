@@ -10,7 +10,7 @@ local Theme = {}
 Theme.ReferenceSize = Vector2.new(900, 420)
 Theme.MinScale = 0.7
 Theme.MaxScale = 1.6
-Theme.MinTouch = 56 -- reference px; * MinScale (0.79 on iPhone landscape) stays >= 44 real px
+Theme.MinTouch = 64 -- reference px; * MinScale (0.7) = 44.8 real px (iPhone SE landscape is ~0.74)
 
 Theme.Font = Enum.Font.FredokaOne
 Theme.TitleFont = Enum.Font.LuckiestGuy

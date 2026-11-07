@@ -1,5 +1,6 @@
 --!strict
--- B1: Side buttons on the right edge (2 columns x 3 rows, above the mobile jump button).
+-- B1: Side buttons on the right edge (2 columns x 4 rows, anchored top-right so they stay
+-- above the mobile jump button; C6 added Index and moved the grid up, see docs/MOBILE_AUDIT.md).
 -- Each one toggles a panel registered with Components.Panel(name, ...).
 
 local Theme = require(script.Parent.Theme)
@@ -13,6 +14,7 @@ local BUTTONS = {
 	{ panel = "Crates", icon = "📦", label = "Crates", color = Colors.Yellow },
 	{ panel = "Quests", icon = "📜", label = "Quests", color = Colors.Blue },
 	{ panel = "Shop", icon = "🛒", label = "Shop", color = Colors.Purple },
+	{ panel = "Index", icon = "📖", label = "Index", color = Colors.Orange },
 	{ panel = "Settings", icon = "⚙️", label = "Settings", color = Colors.Grey },
 }
 
@@ -37,9 +39,10 @@ function Menu:Init()
 	local holder = Instance.new("Frame")
 	holder.Name = "SideButtons"
 	holder.BackgroundTransparency = 1
-	holder.AnchorPoint = Vector2.new(1, 0.5)
-	holder.Position = UDim2.new(1, -10, 0.42, 0)
-	holder.Size = UDim2.fromOffset(SIZE * 2 + GAP, SIZE * 3 + GAP * 2)
+	local rows = math.ceil(#BUTTONS / 2)
+	holder.AnchorPoint = Vector2.new(1, 0)
+	holder.Position = UDim2.new(1, -10, 0, 10)
+	holder.Size = UDim2.fromOffset(SIZE * 2 + GAP, SIZE * rows + GAP * (rows - 1))
 	holder.Parent = root
 	local grid = Instance.new("UIGridLayout")
 	grid.CellSize = UDim2.fromOffset(SIZE, SIZE)

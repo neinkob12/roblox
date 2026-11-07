@@ -72,7 +72,7 @@ local function prompt(kind: "pass" | "product", id: number)
 end
 
 local function row(list: Instance, order: number, icon: string, name: string, info: string): Frame
-	local card = C.Card(list, 70, order)
+	local card = C.Card(list, 74, order)
 	C.Label(card, {
 		name = "Icon",
 		text = icon,
