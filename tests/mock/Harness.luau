@@ -72,8 +72,9 @@ function Harness:boot()
 	return self
 end
 
-function Harness:advance(seconds)
-	S.advance(seconds)
+-- frame: optional frame length (default 1/60). Use 0.1 for long soaks.
+function Harness:advance(seconds, frame)
+	S.advance(seconds, frame)
 end
 
 function Harness:step(n)
@@ -282,6 +283,59 @@ function Harness:invokeServer(player, remoteName, ...)
 	return self:run(function()
 		return remote:InvokeServer(table.unpack(args, 1, args.n))
 	end, ctx)
+end
+
+-- Simulate a tap on a GuiButton in the player's client: fires Activated + MouseButton1Click.
+function Harness:click(player, button)
+	local ctx = Services.state.clients[player]
+	assert(ctx, "click: player has no client")
+	S.spawnIn(ctx, function()
+		local input = Services.input({ UserInputType = D.Enum.UserInputType.Touch })
+		Inst.getSignal(button, "Activated"):Fire(input, 1)
+		Inst.getSignal(button, "MouseButton1Click"):Fire()
+	end)
+	S.flushDeferred()
+end
+
+-- Simulate a key press on the client (UserInputService.InputBegan / InputEnded).
+function Harness:pressKey(player, keyName)
+	local ctx = Services.state.clients[player]
+	local uis = self.game:GetService("UserInputService")
+	S.spawnIn(ctx, function()
+		local key = D.Enum.KeyCode[keyName]
+		local down = Services.input({
+			UserInputType = D.Enum.UserInputType.Keyboard,
+			UserInputState = D.Enum.UserInputState.Begin,
+			KeyCode = key,
+		})
+		Inst.getSignal(uis, "InputBegan"):Fire(down, false)
+		local up = Services.input({
+			UserInputType = D.Enum.UserInputType.Keyboard,
+			UserInputState = D.Enum.UserInputState.End,
+			KeyCode = key,
+		})
+		Inst.getSignal(uis, "InputEnded"):Fire(up, false)
+	end)
+	S.flushDeferred()
+end
+
+-- Send a chat command as the player (TextChatService TextChatCommand.Triggered).
+function Harness:chat(player, text)
+	local alias = string.match(text, "^(%S+)")
+	local found = false
+	for _, x in self.game:GetService("TextChatService"):GetDescendants() do
+		if Inst.I(x).className == "TextChatCommand" and (x.PrimaryAlias == alias or x.SecondaryAlias == alias) then
+			found = true
+			local source = Inst.create("TextSource")
+			source.Name = player.Name
+			Inst.rawSet(source, "UserId", player.UserId)
+			S.spawnIn(self.server, function()
+				Inst.getSignal(x, "Triggered"):Fire(source, text)
+			end)
+		end
+	end
+	S.flushDeferred()
+	return found
 end
 
 -- Remote events the server sent this player, optionally filtered by remote name.

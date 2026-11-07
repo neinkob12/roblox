@@ -25,6 +25,7 @@ M.classes = classes
 
 -- Stats about mock gaps, printed at the end of a run.
 M.unknownReads = {}
+M.unknownWrites = {} -- property names the mock has no default for (review for typos)
 
 local NIL = newproxy(false) -- default value meaning "nil, but this property exists"
 M.NIL = NIL
@@ -183,6 +184,7 @@ function M.create(className: string, parent: any?)
 		tags = {},
 		destroyed = false,
 		isValue = r.isa.ValueBase == true,
+		creator = S.current(),
 		id = M.nextId(),
 	}
 	for _, init in r.inits do
@@ -321,8 +323,20 @@ InstMT.__index = function(inst, key)
 	error(`{tostring(key)} is not a valid member of {d.className} "{M.fullName(inst)}"`, 2)
 end
 
+-- Client writes to server-created instances only change the client's copy in Roblox.
+M.clientWrites = {}
+local function auditWrite(d, what)
+	local c = S.current()
+	if c.isClient and d.creator and d.creator.isServer then
+		local k = `{d.className}.{what}`
+		M.clientWrites[k] = (M.clientWrites[k] or 0) + 1
+	end
+end
+M.auditWrite = auditWrite
+
 InstMT.__newindex = function(inst, key, value)
 	local d = internal[inst]
+	auditWrite(d, tostring(key))
 	local r = d.r
 	local setter = r.setters[key]
 	if setter then
@@ -331,6 +345,10 @@ InstMT.__newindex = function(inst, key, value)
 	end
 	if r.methods[key] or r.events[key] or r.getters[key] then
 		error(`{key} cannot be assigned to ({d.className})`, 2)
+	end
+	if r.props[key] == nil and d.props[key] == nil then
+		local k = `{d.className}.{tostring(key)}`
+		M.unknownWrites[k] = (M.unknownWrites[k] or 0) + 1
 	end
 	local old = d.props[key]
 	if old == nil then
@@ -584,6 +602,7 @@ M.defineClass("Instance", {
 			if type(name) ~= "string" then
 				error("Attribute name must be a string", 2)
 			end
+			auditWrite(d, "@" .. name)
 			if value ~= nil and not ATTR_TYPES[D.typeof(value)] then
 				error(`{D.typeof(value)} is not a supported attribute type`, 2)
 			end

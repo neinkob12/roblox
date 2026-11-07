@@ -226,11 +226,17 @@ function S.step()
 	S.flushDeferred()
 end
 
-function S.advance(seconds: number)
+-- frame: optional frame length for this advance (e.g. 0.1 for cheap long soaks)
+function S.advance(seconds: number, frame: number?)
+	local saved = S.frame
+	if frame then
+		S.frame = frame
+	end
 	local target = S.now + seconds
 	while S.now + 1e-9 < target do
 		S.step()
 	end
+	S.frame = saved
 end
 
 -- Step frames until cond() is true or the timeout (seconds) passes. Returns cond's result.

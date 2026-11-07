@@ -1827,6 +1827,30 @@ simple("ChatWindowConfiguration", "Instance", { Enabled = true }, { creatable = 
 simple("ChatInputBarConfiguration", "Instance", { Enabled = true, TargetTextChannel = NIL }, { creatable = false })
 simple("BubbleChatConfiguration", "Instance", { Enabled = true }, { creatable = false })
 
+---------------------------------------------------------------- input
+simple("InputObject", "Instance", {
+	UserInputType = Enum.UserInputType.Touch,
+	UserInputState = Enum.UserInputState.End,
+	KeyCode = Enum.KeyCode.Unknown,
+	Position = Vector3.new(422, 195, 0),
+	Delta = Vector3.zero,
+}, {
+	creatable = false,
+	methods = {
+		IsModifierKeyDown = function()
+			return false
+		end,
+	},
+})
+
+function M.input(props)
+	local i = Inst.create("InputObject")
+	for k, v in props or {} do
+		Inst.rawSet(i, k, v)
+	end
+	return i
+end
+
 ---------------------------------------------------------------- game construction
 function M.newGame()
 	local game = Inst.create("DataModel")
