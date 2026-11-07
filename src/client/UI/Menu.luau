@@ -16,6 +16,7 @@ local BUTTONS = {
 	{ panel = "Quests", icon = "📜", label = "Quests", color = Colors.Blue },
 	{ panel = "Shop", icon = "🛒", label = "Shop", color = Colors.Purple },
 	{ panel = "Index", icon = "📖", label = "Index", color = Colors.Orange },
+	{ panel = "Daily", icon = "🎁", label = "Daily", color = Colors.Red }, -- E1 DailyPanel (popup, not a panel)
 	{ panel = "Settings", icon = "⚙️", label = "Settings", color = Colors.Grey },
 }
 
@@ -26,6 +27,12 @@ local Menu = {}
 
 -- Small red badge (e.g. unopened crates, claimable quests). Other UI modules call this.
 local badges: { [string]: TextLabel } = {}
+-- Buttons whose target is not a Components panel (e.g. the Daily popup) register a click action.
+local actions: { [string]: () -> () } = {}
+function Menu.SetAction(panel: string, fn: () -> ())
+	actions[panel] = fn
+end
+
 function Menu.SetBadge(panel: string, count: number)
 	local b = badges[panel]
 	if not b then
@@ -58,7 +65,12 @@ function Menu:Init()
 			color = def.color,
 			order = i,
 			onClick = function()
-				Panels.TogglePanel(def.panel)
+				local action = actions[def.panel]
+				if action then
+					action()
+				else
+					Panels.TogglePanel(def.panel)
+				end
 			end,
 		})
 		caption.Size = UDim2.new(1, -16, 0.6, -4)

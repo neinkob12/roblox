@@ -26,6 +26,8 @@ local EVENTS = {
 	"RequestClaimQuest", -- (questId: string)
 	"RequestSetting", -- (name: string, value: boolean)
 	"RequestTutorialStep", -- (step: number) C4 TutorialService validates (only forward, max +1)
+	"RequestDailyClaim", -- () E1 DailyService: claim today's login reward (20h cooldown, 48h streak reset)
+	"RequestIndexClaim", -- (count: number) E1 IndexRewardService: claim the Index milestone at `count` cows discovered
 }
 
 local FUNCTIONS = {

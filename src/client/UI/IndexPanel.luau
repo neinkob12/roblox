@@ -5,14 +5,19 @@
 --   Header: "x/18 discovered". Tapping a discovered cow closes the panel and replays
 --   DiscoveryController:Show(tier).
 -- Viewports are built lazily the first time the panel opens (18 small static models).
+-- E1: milestone row under the header (Config/IndexRewards): one claim button per milestone,
+--   tick marks on the progress bar, and a red badge on the Menu "Index" button while one is claimable.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Cows = require(ReplicatedStorage.Shared.Config.Cows)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Net = require(ReplicatedStorage.Shared.Net)
+local IndexRewards = require(ReplicatedStorage.Shared.Config.IndexRewards)
 local Theme = require(script.Parent.Parent.Lib.Theme)
 local C = require(script.Parent.Parent.Lib.UiKit)
 local Panels = require(script.Parent.Components)
+local Menu = require(script.Parent.Menu)
 local DataController = require(script.Parent.Parent.Controllers.DataController)
 local DiscoveryController = require(script.Parent.Parent.Controllers.DiscoveryController)
 local CowViewport = require(script.Parent.Parent.Lib.CowViewport)
@@ -22,6 +27,8 @@ local Colors = Theme.Colors
 local COLUMNS = 4
 local CELL_H = 150
 local CELL_GAP = 10
+local MILESTONE_H = 64 -- Theme.MinTouch
+local GRID_TOP = 36 + MILESTONE_H + 8
 
 local IndexPanel = {}
 
@@ -37,6 +44,28 @@ local cells: { [number]: Cell } = {}
 local header: TextLabel
 local headerFill: Frame
 local built = false
+local milestoneButtons: { [number]: { button: TextButton, caption: TextLabel } } = {}
+
+local function refreshMilestones(data: any, found: number)
+	for _, m in IndexRewards.Milestones do
+		local entry = milestoneButtons[m.count]
+		if entry then
+			if IndexRewards.IsClaimed(data, m.count) then
+				entry.caption.Text = `✅ {m.label}`
+				C.SetButtonEnabled(entry.button, false)
+				entry.button.BackgroundColor3 = Colors.GreyDark
+			elseif found >= m.count then
+				entry.caption.Text = `CLAIM\n{m.label}`
+				C.SetButtonColor(entry.button, Colors.Green)
+				C.SetButtonEnabled(entry.button, true)
+			else
+				entry.caption.Text = `{m.count} 🐮\n{m.label}`
+				C.SetButtonEnabled(entry.button, false)
+			end
+		end
+	end
+	Menu.SetBadge("Index", IndexRewards.ClaimableCount(data))
+end
 
 local function isDiscovered(data: any, tier: number): boolean
 	if not data or typeof(data.discovered) ~= "table" then
@@ -82,11 +111,12 @@ local function refresh()
 		end
 	end
 	header.Text = `{found}/{Cows.Count} discovered`
+	refreshMilestones(data, IndexRewards.DiscoveredCount(data))
 	C.Tween(headerFill, 0.3, { Size = UDim2.fromScale(math.clamp(found / math.max(Cows.Count, 1), 0, 1), 1) })
 end
 
 function IndexPanel:Init()
-	local _, body = Panels.Panel("Index", "COW INDEX", Vector2.new(600, 380), Colors.Orange)
+	local _, body = Panels.Panel("Index", "COW INDEX", Vector2.new(600, 400), Colors.Orange)
 
 	-- header: progress text over a bar
 	local bar = Instance.new("Frame")
@@ -114,11 +144,56 @@ function IndexPanel:Init()
 		zIndex = 3,
 	})
 
+	-- E1 milestone ticks on the bar + one claim button per milestone
+	for _, m in IndexRewards.Milestones do
+		local tick = Instance.new("Frame")
+		tick.Name = "Tick" .. m.count
+		tick.BackgroundColor3 = Colors.Stroke
+		tick.BorderSizePixel = 0
+		tick.AnchorPoint = Vector2.new(0.5, 0)
+		tick.Position = UDim2.fromScale(math.clamp(m.count / math.max(Cows.Count, 1), 0, 1), 0)
+		tick.Size = UDim2.new(0, 3, 1, 0)
+		tick.ZIndex = 3
+		tick.Visible = m.count < Cows.Count
+		tick.Parent = bar
+	end
+	local row = Instance.new("Frame")
+	row.Name = "Milestones"
+	row.BackgroundTransparency = 1
+	row.Position = UDim2.fromOffset(0, 36)
+	row.Size = UDim2.new(1, -10, 0, MILESTONE_H)
+	row.ZIndex = 2
+	row.Parent = body
+	local rowLayout = Instance.new("UIGridLayout")
+	rowLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	rowLayout.CellPadding = UDim2.fromOffset(6, 0)
+	rowLayout.CellSize = UDim2.new(1 / math.max(#IndexRewards.Milestones, 1), -6, 1, 0)
+	rowLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	rowLayout.Parent = row
+	for i, m in IndexRewards.Milestones do
+		local count = m.count
+		local b, caption = C.Button(row, {
+			name = "Milestone" .. count,
+			text = `{count} 🐮\n{m.label}`,
+			color = Colors.Green,
+			order = i,
+			zIndex = 3,
+			onClick = function()
+				local data = DataController:Get()
+				if IndexRewards.DiscoveredCount(data) >= count and not IndexRewards.IsClaimed(data, count) then
+					Net.Event("RequestIndexClaim"):FireServer(count)
+				end
+			end,
+		})
+		C.SetButtonEnabled(b, false)
+		milestoneButtons[count] = { button = b, caption = caption }
+	end
+
 	local holder = Instance.new("Frame")
 	holder.Name = "GridHolder"
 	holder.BackgroundTransparency = 1
-	holder.Position = UDim2.fromOffset(0, 36)
-	holder.Size = UDim2.new(1, 0, 1, -36)
+	holder.Position = UDim2.fromOffset(0, GRID_TOP)
+	holder.Size = UDim2.new(1, 0, 1, -GRID_TOP)
 	holder.ZIndex = 2
 	holder.Parent = body
 
@@ -203,6 +278,7 @@ end
 
 function IndexPanel:Start()
 	DataController:OnChanged("discovered", refresh)
+	DataController:OnChanged("indexClaimed", refresh)
 	Panels.OnPanelOpened("Index", function()
 		built = true
 		refresh()
