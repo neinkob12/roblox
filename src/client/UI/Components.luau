@@ -14,12 +14,14 @@
 --   Components.Panel(name, title, size, color?) -> (panel: Frame, body: Frame)
 --   Components.OpenPanel(name) / ClosePanel() / TogglePanel(name) / IsOpen(name)
 --   Components.OnPanelOpened(name, fn)
+--   Components.ReduceMotion() -> boolean     data.settings.reduceMotion (C6)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Theme = require(script.Parent.Theme)
+local DataController = require(script.Parent.Parent.Controllers.DataController)
 
 local Components = {}
 
@@ -123,6 +125,13 @@ function Components.Label(parent: Instance, props: LabelProps): TextLabel
 	end
 	l.Parent = parent
 	return l
+end
+
+-- True when the player turned on "Reduce motion" in Settings (skip bounces and popups).
+function Components.ReduceMotion(): boolean
+	local data = DataController:Get()
+	local settings = if data and typeof(data.settings) == "table" then data.settings else nil
+	return settings ~= nil and settings.reduceMotion == true
 end
 
 local function darken(c: Color3, amount: number): Color3
@@ -269,7 +278,9 @@ function Components.Rainbow(target: Instance): UIGradient
 			conn:Disconnect()
 			return
 		end
-		g.Rotation = (os.clock() * 120) % 360
+		if not Components.ReduceMotion() then
+			g.Rotation = (os.clock() * 120) % 360
+		end
 	end)
 	return g
 end
@@ -314,6 +325,23 @@ end
 
 type PanelEntry = { frame: Frame, scale: UIScale, opened: { () -> () } }
 
+-- C6: center a panel in the area left of the side menu (the menu draws above the dimmer, see
+-- Theme.Layers) and shrink it when it would not fit (tiny phones where UIScale hits MinScale).
+local function fitScale(frame: Frame): number
+	local parent = frame.Parent
+	if not parent or not parent:IsA("GuiObject") then
+		return 1
+	end
+	local avail = (parent :: GuiObject).Size
+	local w, h = frame.Size.X.Offset, frame.Size.Y.Offset
+	if w <= 0 or h <= 0 or avail.X.Offset <= 0 or avail.Y.Offset <= 0 then
+		return 1
+	end
+	local areaW = avail.X.Offset - Theme.MenuReserve
+	frame.Position = UDim2.new(0, areaW / 2, 0.5, 0)
+	return math.min(1, (areaW - 16) / w, (avail.Y.Offset - 24) / h)
+end
+
 local panels: { [string]: PanelEntry } = {}
 local pendingOpenFns: { [string]: { () -> () } } = {}
 local openName: string? = nil
@@ -324,7 +352,7 @@ local function ensurePanelRoot(): Frame
 	if panelRoot then
 		return panelRoot
 	end
-	local _, root = Components.Screen("Panels", 20)
+	local _, root = Components.Screen("Panels", Theme.Layers.Panels)
 	local d = Instance.new("TextButton")
 	d.Name = "Dim"
 	d.Text = ""
@@ -350,7 +378,7 @@ function Components.Panel(name: string, title: string, size: Vector2, color: Col
 	local frame = Instance.new("Frame")
 	frame.Name = name
 	frame.AnchorPoint = Vector2.new(0.5, 0.5)
-	frame.Position = UDim2.fromScale(0.5, 0.52)
+	frame.Position = UDim2.fromScale(0.5, 0.5)
 	frame.Size = UDim2.fromOffset(size.X, size.Y)
 	frame.BackgroundColor3 = Theme.Colors.Panel
 	frame.Visible = false
@@ -471,8 +499,13 @@ function Components.OpenPanel(name: string)
 	end
 	openName = name
 	entry.frame.Visible = true
-	entry.scale.Scale = 0.6
-	Components.Tween(entry.scale, 0.25, { Scale = 1 }, Enum.EasingStyle.Back)
+	local target = fitScale(entry.frame)
+	if Components.ReduceMotion() then
+		entry.scale.Scale = target
+	else
+		entry.scale.Scale = 0.6 * target
+		Components.Tween(entry.scale, 0.25, { Scale = target }, Enum.EasingStyle.Back)
+	end
 	if dim then
 		dim.Visible = true
 		Components.Tween(dim, 0.2, { BackgroundTransparency = 0.45 })
