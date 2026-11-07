@@ -13,7 +13,11 @@ local Safe = require(ReplicatedStorage.Shared.Safe)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Cows = require(ReplicatedStorage.Shared.Config.Cows)
 local DataService = require(script.Parent.DataService)
-local HerdUtil = require(script.Parent.HerdUtil)
+local Notify = require(script.Parent.Parent.Util.Notify)
+local PlotService = require(script.Parent.PlotService)
+local Pads = require(script.Parent.Parent.Util.Pads)
+local Rewards = require(script.Parent.Parent.Util.Rewards)
+local Net = require(ReplicatedStorage.Shared.Net)
 
 local MergeService = {}
 
@@ -47,7 +51,7 @@ function MergeService:MergeAll(player: Player, silent: boolean?): number
 		if n > 0 then
 			local left = have - n * cost
 			data.cows[key] = if left > 0 then left else nil
-			if HerdUtil.AddCowsRaw(player, data, tier + 1, n) then
+			if Rewards.AddCowsRaw(player, data, tier + 1, n) then
 				discoveredChanged = true
 			end
 			total += n
@@ -56,7 +60,7 @@ function MergeService:MergeAll(player: Player, silent: boolean?): number
 	end
 	if total == 0 then
 		if not silent then
-			HerdUtil.Notify(player, `Need {cost} cows of the same tier to merge`, "error")
+			Notify.To(player, `Need {cost} cows of the same tier to merge`, "error")
 		end
 		return 0
 	end
@@ -68,28 +72,28 @@ function MergeService:MergeAll(player: Player, silent: boolean?): number
 	end
 	local best = Cows.Get(highestNew)
 	local bestName = if best then best.name else "?"
-	HerdUtil.Notify(player, `MERGED! x{total} (up to {bestName})`, "success")
-	require(ReplicatedStorage.Shared.Net).Event("Fx"):FireClient(player, "merge", { count = total, tier = highestNew })
+	Notify.To(player, `MERGED! x{total} (up to {bestName})`, "success")
+	Net.Event("Fx"):FireClient(player, "merge", { count = total, tier = highestNew })
 	return total
 end
 
 local function refreshLabel(player: Player)
 	local data = DataService:Get(player)
-	local plot = HerdUtil.GetPlot(player)
+	local plot = PlotService:GetPlot(player)
 	local pad = plot and plot:FindFirstChild("MergePad")
 	if not data or not pad then
 		return
 	end
 	local n = MergeService:CountMerges(data.cows)
 	if n > 0 then
-		HerdUtil.SetLabel(pad, `MERGE\n{n} ready!`, Color3.fromRGB(255, 220, 80))
+		Pads.SetLabel(pad, `MERGE\n{n} ready!`, Color3.fromRGB(255, 220, 80))
 	else
-		HerdUtil.SetLabel(pad, `MERGE\n{Economy.MergeCost} -> 1`, Color3.fromRGB(255, 255, 255))
+		Pads.SetLabel(pad, `MERGE\n{Economy.MergeCost} -> 1`, Color3.fromRGB(255, 255, 255))
 	end
 end
 
 function MergeService:Start()
-	HerdUtil.BindPad("MergePad", function(player)
+	Pads.BindPlotPad("MergePad", function(player)
 		MergeService:MergeAll(player)
 		refreshLabel(player)
 	end)

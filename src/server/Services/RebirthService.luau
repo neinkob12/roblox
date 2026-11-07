@@ -12,9 +12,10 @@ local Net = require(ReplicatedStorage.Shared.Net)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
-local HerdUtil = require(script.Parent.HerdUtil)
 local Pricing = require(ReplicatedStorage.Shared.Pricing)
 local WalkSpeedService = require(script.Parent.WalkSpeedService)
+local Notify = require(script.Parent.Parent.Util.Notify)
+local Debounce = require(script.Parent.Parent.Util.Debounce)
 
 local RebirthService = {}
 
@@ -23,7 +24,7 @@ function RebirthService:Cost(rebirths: number): number
 end
 
 local function onRequest(player: Player)
-	if not HerdUtil.Debounce(player, "rebirth", 1) then
+	if not Debounce.Try(player, "rebirth", 1) then
 		return
 	end
 	local data = DataService:Get(player)
@@ -32,18 +33,14 @@ local function onRequest(player: Player)
 	end
 	local cost = RebirthService:Cost(data.rebirths)
 	if data.cash < cost then
-		HerdUtil.Notify(player, `Rebirth needs {Format.Cash(cost)}`, "error")
+		Notify.To(player, `Rebirth needs {Format.Cash(cost)}`, "error")
 		return
 	end
 
 	-- set directly: SpendCash(cash - StartingCash) loses precision above 2^53
 	data.cash = Economy.StartingCash
 
-	local cows = {}
-	for tier, count in Economy.StartingCows do
-		cows[tostring(tier)] = count
-	end
-	data.cows = cows
+	data.cows = DataService:NewStartingCows()
 	data.cowsBought = 0
 	data.cratesBought = 0
 	data.tankMilk = 0
@@ -76,7 +73,7 @@ local function onRequest(player: Player)
 	WalkSpeedService:Apply(player)
 
 	local mult = 1 + Economy.Rebirth.CashMultiplierPerRebirth * data.rebirths
-	HerdUtil.Notify(player, `REBIRTH {data.rebirths}! Cash x{Format.Number(mult)} forever`, "rare")
+	Notify.To(player, `REBIRTH {data.rebirths}! Cash x{Format.Number(mult)} forever`, "rare")
 end
 
 function RebirthService:Start()

@@ -2,11 +2,11 @@
 -- The Dairy: milk price board, milk truck, deposit pad (can -> queue), selling, cash pad.
 -- Owner: A3.
 --
---   DairyService:GetSellPerSecond(player, data) -> number
+--   Capacity.SellPerSecond(player, data) -> number
 --   DairyService:Deposit(player) -> number      (milk deposited; used by DepositPad and Auto Sell)
 --
 -- Workspace attributes set here: MilkPrice, MilkPriceNextAt, TruckActive, TruckLeavesAt, TruckNextAt.
--- Player attribute set here: SellPerSecond.
+-- Player attribute set here: SellPerSecond (formula in shared/Capacity).
 --
 -- The price is LOCKED at deposit time: data.dairyQueue holds milk VALUE (milk * price incl. truck),
 -- not raw milk. The queue drains at SellPerSecond value units/sec, times Multipliers.Cash, into
@@ -21,16 +21,14 @@ local Net = require(ReplicatedStorage.Shared.Net)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
-local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
 local DataService = require(script.Parent.DataService)
-local PlotService = require(script.Parent.PlotService)
+local Notify = require(script.Parent.Parent.Util.Notify)
+local Debounce = require(script.Parent.Parent.Util.Debounce)
+local Pads = require(script.Parent.Parent.Util.Pads)
+local Capacity = require(ReplicatedStorage.Shared.Capacity)
 
 local DairyService = {}
 
-local DEBOUNCE = 1
-local lastDeposit: { [Player]: number } = {}
-local lastCollect: { [Player]: number } = {}
-local lastAutoSell: { [Player]: number } = {}
 local rng = Random.new()
 
 local dairy: Instance? = nil
@@ -41,13 +39,6 @@ local COLOR_DOWN = Color3.fromRGB(235, 70, 60)
 local COLOR_FLAT = Color3.fromRGB(255, 255, 255)
 
 ----------------------------------------------------------------------------- selling
-
-function DairyService:GetSellPerSecond(player: Player, data: any): number
-	local mps = Multipliers.MilkPerSecond(player, data)
-	local lvl = (data.upgrades and data.upgrades.sellSpeed) or 0
-	local rate = mps * Economy.Dairy.BaseSellFactor * (1 + lvl * Upgrades.ById.sellSpeed.perLevel)
-	return math.max(Economy.Dairy.MinSellPerSecond, rate)
-end
 
 function DairyService:Deposit(player: Player): number
 	local data = DataService:Get(player)
@@ -72,7 +63,7 @@ local function sellTick(dt: number)
 	for _, player in Players:GetPlayers() do
 		local data = DataService:Get(player)
 		if data then
-			local rate = DairyService:GetSellPerSecond(player, data)
+			local rate = Capacity.SellPerSecond(player, data)
 			player:SetAttribute("SellPerSecond", rate)
 			local queue = data.dairyQueue or 0
 			if queue > 0 then
@@ -92,40 +83,18 @@ local function sellTick(dt: number)
 	end
 end
 
-local function debounced(map: { [Player]: number }, player: Player): boolean
-	local now = os.clock()
-	if map[player] and now - map[player] < DEBOUNCE then
-		return true
-	end
-	map[player] = now
-	return false
-end
-
-local function onDepositTouched(hit: BasePart)
-	local player = PlotService:GetPlayerFromHit(hit)
-	if not player or debounced(lastDeposit, player) then
-		return
-	end
-	local data = DataService:Get(player)
-	if not data then
-		return
-	end
+local function onDeposit(player: Player)
 	local price = Multipliers.MilkPrice()
 	local milk = DairyService:Deposit(player)
 	if milk > 0 then
-		Net.Event("Notify")
-			:FireClient(player, `Sold {Format.Number(milk)} milk at {string.format("%.2f", price)}x!`, "success")
+		Notify.To(player, `Sold {Format.Number(milk)} milk at {string.format("%.2f", price)}x!`, "success")
 		Net.Event("Fx"):FireClient(player, "deposit", { amount = milk })
 	else
-		Net.Event("Notify"):FireClient(player, "Your can is empty! Fill it at your tank tap", "info")
+		Notify.To(player, "Your can is empty! Fill it at your tank tap", "info")
 	end
 end
 
-local function onCashTouched(hit: BasePart)
-	local player = PlotService:GetPlayerFromHit(hit)
-	if not player or debounced(lastCollect, player) then
-		return
-	end
+local function onCollect(player: Player)
 	local data = DataService:Get(player)
 	if not data then
 		return
@@ -133,7 +102,7 @@ local function onCashTouched(hit: BasePart)
 	local cash = data.dairyCash or 0
 	if cash <= 0 then
 		if (data.dairyQueue or 0) > 0 then
-			Net.Event("Notify"):FireClient(player, "Still selling, come back in a moment!", "info")
+			Notify.To(player, "Still selling, come back in a moment!", "info")
 		end
 		return
 	end
@@ -141,7 +110,7 @@ local function onCashTouched(hit: BasePart)
 	DataService:Replicate(player, "dairyCash")
 	DataService:AddCash(player, cash)
 	Net.Event("Fx"):FireClient(player, "cash", { amount = cash })
-	Net.Event("Notify"):FireClient(player, `+{Format.Cash(cash)}`, "success")
+	Notify.To(player, `+{Format.Cash(cash)}`, "success")
 end
 
 ----------------------------------------------------------------------------- price board
@@ -348,7 +317,7 @@ local function truckTick()
 			workspace:SetAttribute("TruckActive", false)
 			workspace:SetAttribute("TruckNextAt", now + Economy.Truck.EverySeconds)
 			truckLeave()
-			Net.Event("Notify"):FireAllClients("The milk truck left. See you next time!", "info")
+			Notify.All("The milk truck left. See you next time!", "info")
 		end
 	else
 		local nextAt = workspace:GetAttribute("TruckNextAt")
@@ -358,7 +327,7 @@ local function truckTick()
 			workspace:SetAttribute("TruckActive", true)
 			workspace:SetAttribute("TruckLeavesAt", now + Economy.Truck.StaysSeconds)
 			truckArrive()
-			Net.Event("Notify"):FireAllClients(
+			Notify.All(
 				`The MILK TRUCK is here! x{Economy.Truck.PriceBonus} milk price for {Economy.Truck.StaysSeconds}s`,
 				"rare"
 			)
@@ -373,11 +342,6 @@ function DairyService:Init()
 	workspace:SetAttribute("TruckActive", false)
 	workspace:SetAttribute("TruckNextAt", os.time() + Economy.Truck.EverySeconds)
 	workspace:SetAttribute("TruckLeavesAt", 0)
-	Players.PlayerRemoving:Connect(function(player)
-		lastDeposit[player] = nil
-		lastCollect[player] = nil
-		lastAutoSell[player] = nil
-	end)
 end
 
 function DairyService:Start()
@@ -385,13 +349,13 @@ function DairyService:Start()
 	if dairy then
 		local deposit = dairy:FindFirstChild("DepositPad") or dairy:WaitForChild("DepositPad", 10)
 		if deposit and deposit:IsA("BasePart") then
-			deposit.Touched:Connect(onDepositTouched)
+			Pads.BindWorldPad(deposit, "DepositPad", onDeposit)
 		else
 			warn("[DairyService] Dairy.DepositPad not found")
 		end
 		local cashPad = dairy:FindFirstChild("CashPad") or dairy:WaitForChild("CashPad", 10)
 		if cashPad and cashPad:IsA("BasePart") then
-			cashPad.Touched:Connect(onCashTouched)
+			Pads.BindWorldPad(cashPad, "CashPad", onCollect)
 		else
 			warn("[DairyService] Dairy.CashPad not found")
 		end
@@ -412,11 +376,9 @@ function DairyService:Start()
 			Safe.Run("DairyService truck", truckTick)
 			Safe.Run("DairyService board", updateBoard)
 			-- Auto Sell gamepass: deposit the can remotely
-			local now = os.clock()
 			for _, player in Players:GetPlayers() do
 				if player:GetAttribute("Pass_AutoSell") then
-					if not lastAutoSell[player] or now - lastAutoSell[player] >= Economy.Dairy.AutoSellSeconds then
-						lastAutoSell[player] = now
+					if Debounce.Try(player, "autoSell", Economy.Dairy.AutoSellSeconds) then
 						Safe.Run("DairyService auto sell", DairyService.Deposit, DairyService, player)
 					end
 				end
@@ -432,10 +394,7 @@ function DairyService:Start()
 		local now = os.clock()
 		local dt = math.min(now - last, Economy.Dairy.TickSeconds * 4)
 		last = now
-		local ok, err = pcall(sellTick :: any, dt)
-		if not ok then
-			warn(`[DairyService] sell tick failed: {err}`)
-		end
+		Safe.Run("DairyService sell tick", sellTick, dt)
 	end
 end
 

@@ -4,11 +4,11 @@
 --
 --   /cash N          set cash to N (supports 1e9, 2.5M, 3b ...). "/cash +N" adds N instead.
 --   /cows tier n     give n cows of a tier (default n = 1)
---   /rebirths n      set the rebirth count
+--   /rebirths n      set the rebirth count (max 1000)
 --   /crate n         give n unopened Mystery Milk Crates (default 1)
 --   /reset           wipe your data back to a brand new player
 --   /event id        start a timed event (DoublePrice, MilkFlood, GoldenRush, CrateRain); "/event off" ends it
---   /price x         lock the milk price to x for 5 minutes; "/price off" re-rolls it
+--   /price x         lock the milk price to x (0.1 to 10) for 5 minutes; "/price off" re-rolls it
 --   /offline seconds simulate offline earnings as if you were away that long (popup included)
 --   /truck           call the milk truck now (it arrives on the next DairyService tick)
 --   /admin           list the commands
@@ -21,19 +21,20 @@ local RunService = game:GetService("RunService")
 local TextChatService = game:GetService("TextChatService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Net = require(ReplicatedStorage.Shared.Net)
 local Format = require(ReplicatedStorage.Shared.Format)
-local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Cows = require(ReplicatedStorage.Shared.Config.Cows)
 local Events = require(ReplicatedStorage.Shared.Config.Events)
 local DataService = require(script.Parent.DataService)
-local HerdUtil = require(script.Parent.HerdUtil)
 local ProductionService = require(script.Parent.ProductionService)
 local WalkSpeedService = require(script.Parent.WalkSpeedService)
+local Notify = require(script.Parent.Parent.Util.Notify)
+local Rewards = require(script.Parent.Parent.Util.Rewards)
 
 local PRICE_LOCK_SECONDS = 5 * 60
 local MAX_GIVE = 1e6 -- cows / crates per command, keeps typos from freezing anything
+local MAX_REBIRTHS = 1000 -- rebirth cost grows exponentially; more would overflow the price math
+local MIN_PRICE, MAX_PRICE = 0.1, 10
 
 local AdminService = {}
 
@@ -43,10 +44,6 @@ local commands: { [string]: { usage: string, run: Handler } } = {}
 local order: { string } = {}
 
 ----------------------------------------------------------------------------- helpers
-
-local function notify(player: Player, text: string, kind: string?)
-	Net.Event("Notify"):FireClient(player, text, kind or "info")
-end
 
 local SUFFIX: { [string]: number } = {
 	k = 1e3,
@@ -127,45 +124,45 @@ register("cash", "/cash N  (1e9, 2.5M; +N adds)", function(player, args)
 	local data = DataService:Get(player)
 	local raw = args[1]
 	if not data or not raw then
-		notify(player, "Usage: /cash N", "error")
+		Notify.To(player, "Usage: /cash N", "error")
 		return
 	end
 	local adding = string.sub(raw, 1, 1) == "+"
 	local n = parseNumber(if adding then string.sub(raw, 2) else raw)
 	if not n then
-		notify(player, `Not a number: {raw}`, "error")
+		Notify.To(player, `Not a number: {raw}`, "error")
 		return
 	end
 	-- AddCash is the only way cash goes up; a negative delta lowers it (AddCash skips stats for < 0)
 	local delta = if adding then n else n - data.cash
 	DataService:AddCash(player, delta)
-	notify(player, `[Admin] cash = {Format.Cash(data.cash)}`, "success")
+	Notify.To(player, `[Admin] cash = {Format.Cash(data.cash)}`, "success")
 end)
 
 register("cows", "/cows tier n", function(player, args)
 	local tier = parseNumber(args[1])
 	local n = parseNumber(args[2]) or 1
 	if not tier or tier ~= math.floor(tier) or tier < 1 or tier > Cows.Count then
-		notify(player, `Usage: /cows tier(1-{Cows.Count}) n`, "error")
+		Notify.To(player, `Usage: /cows tier(1-{Cows.Count}) n`, "error")
 		return
 	end
 	n = math.clamp(math.floor(n), 1, MAX_GIVE)
-	HerdUtil.GiveCow(player, tier, n)
+	Rewards.Cow(player, tier, n)
 	local cow = Cows.Get(tier)
-	notify(player, `[Admin] +{Format.Number(n)} {cow and cow.name or "?"} (tier {tier})`, "success")
+	Notify.To(player, `[Admin] +{Format.Number(n)} {cow and cow.name or "?"} (tier {tier})`, "success")
 end)
 
 register("rebirths", "/rebirths n", function(player, args)
 	local data = DataService:Get(player)
 	local n = parseNumber(args[1])
 	if not data or not n or n < 0 then
-		notify(player, "Usage: /rebirths n", "error")
+		Notify.To(player, `Usage: /rebirths n  (0-{MAX_REBIRTHS})`, "error")
 		return
 	end
-	data.rebirths = math.floor(n)
+	data.rebirths = math.min(math.floor(n), MAX_REBIRTHS)
 	DataService:Replicate(player, "rebirths")
 	local mult = 1 + Economy.Rebirth.CashMultiplierPerRebirth * data.rebirths
-	notify(player, `[Admin] rebirths = {data.rebirths} (cash x{Format.Number(mult)})`, "success")
+	Notify.To(player, `[Admin] rebirths = {data.rebirths} (cash x{Format.Number(mult)})`, "success")
 end)
 
 register("crate", "/crate n", function(player, args)
@@ -174,9 +171,8 @@ register("crate", "/crate n", function(player, args)
 		return
 	end
 	local n = math.clamp(math.floor(parseNumber(args[1]) or 1), 1, MAX_GIVE)
-	data.crates = (data.crates or 0) + n
-	DataService:Replicate(player, "crates")
-	notify(player, `[Admin] +{n} crates (now {data.crates})`, "success")
+	Rewards.Crates(player, n)
+	Notify.To(player, `[Admin] +{n} crates (now {data.crates})`, "success")
 end)
 
 register("reset", "/reset  (wipe your data)", function(player, _args)
@@ -200,7 +196,7 @@ register("reset", "/reset  (wipe your data)", function(player, _args)
 	data.lastOnline = os.time()
 	replicateAll(player, data)
 	WalkSpeedService:Apply(player)
-	notify(player, "[Admin] data wiped. Rejoin for a fully clean start (plot, quests).", "success")
+	Notify.To(player, "[Admin] data wiped. Rejoin for a fully clean start (plot, quests).", "success")
 end)
 
 register("event", "/event id | off", function(player, args)
@@ -210,14 +206,14 @@ register("event", "/event id | off", function(player, args)
 		for _, e in Events.List do
 			table.insert(ids, e.id)
 		end
-		notify(player, `Usage: /event {table.concat(ids, " | ")} | off`, "error")
+		Notify.To(player, `Usage: /event {table.concat(ids, " | ")} | off`, "error")
 		return
 	end
 	if string.lower(id) == "off" then
 		workspace:SetAttribute("EventId", "")
 		workspace:SetAttribute("EventEndsAt", 0)
 		workspace:SetAttribute("EventNextAt", os.time() + Events.EverySeconds)
-		notify(player, "[Admin] event ended", "success")
+		Notify.To(player, "[Admin] event ended", "success")
 		return
 	end
 	-- case-insensitive id match
@@ -228,14 +224,14 @@ register("event", "/event id | off", function(player, args)
 		end
 	end
 	if not ev then
-		notify(player, `Unknown event: {id}`, "error")
+		Notify.To(player, `Unknown event: {id}`, "error")
 		return
 	end
 	local endsAt = os.time() + ev.seconds
 	workspace:SetAttribute("EventId", ev.id)
 	workspace:SetAttribute("EventEndsAt", endsAt)
 	workspace:SetAttribute("EventNextAt", endsAt + Events.EverySeconds)
-	Net.Event("Notify"):FireAllClients(ev.name, "rare")
+	Notify.All(ev.name, "rare")
 	-- If EventService (B2) is running it will end the event itself; this is the fallback.
 	task.delay(ev.seconds, function()
 		if workspace:GetAttribute("EventId") == ev.id and workspace:GetAttribute("EventEndsAt") == endsAt then
@@ -249,50 +245,42 @@ register("price", "/price x | off", function(player, args)
 	if raw and string.lower(raw) == "off" then
 		-- DairyService re-rolls on its next tick once MilkPriceNextAt has passed
 		workspace:SetAttribute("MilkPriceNextAt", 0)
-		notify(player, "[Admin] milk price unlocked", "success")
+		Notify.To(player, "[Admin] milk price unlocked", "success")
 		return
 	end
 	local x = parseNumber(raw)
 	if not x or x <= 0 then
-		notify(player, "Usage: /price x  (e.g. 1.5)", "error")
+		Notify.To(player, "Usage: /price x  (e.g. 1.5)", "error")
 		return
 	end
+	x = math.clamp(x, MIN_PRICE, MAX_PRICE)
 	workspace:SetAttribute("MilkPrice", x)
 	workspace:SetAttribute("MilkPriceNextAt", os.time() + PRICE_LOCK_SECONDS)
-	notify(player, `[Admin] milk price = {x}x for {PRICE_LOCK_SECONDS // 60} min`, "success")
+	Notify.To(player, `[Admin] milk price = {x}x for {PRICE_LOCK_SECONDS // 60} min`, "success")
 end)
 
--- Same formula as ProductionService.applyOffline (keep in sync): milk into the tank at
--- Offline.Efficiency, capped by free tank space and Offline.MaxSeconds.
 register("offline", "/offline seconds", function(player, args)
 	local data = DataService:Get(player)
 	local seconds = parseNumber(args[1])
 	if not data or not seconds or seconds <= 0 then
-		notify(player, "Usage: /offline seconds  (e.g. 3600)", "error")
+		Notify.To(player, "Usage: /offline seconds  (e.g. 3600)", "error")
 		return
 	end
-	local elapsed = math.min(seconds, Economy.Offline.MaxSeconds)
-	local mps = Multipliers.MilkPerSecond(player, data)
-	local capacity = ProductionService:GetTankCapacity(player, data)
-	local current = data.tankMilk or 0
-	local milk = math.min(math.max(0, capacity - current), mps * elapsed * Economy.Offline.Efficiency)
+	local milk, elapsed = ProductionService:GrantOffline(player, data, seconds)
 	if milk <= 0 then
-		notify(player, "[Admin] tank is already full, nothing to add", "info")
+		Notify.To(player, "[Admin] tank is already full, nothing to add", "info")
 		return
 	end
-	data.tankMilk = current + milk
-	DataService:Replicate(player, "tankMilk")
-	Net.Event("OfflineEarnings"):FireClient(player, milk, elapsed)
-	notify(player, `[Admin] offline {Format.Time(elapsed)}: +{Format.Number(milk)} milk`, "success")
+	Notify.To(player, `[Admin] offline {Format.Time(elapsed)}: +{Format.Number(milk)} milk`, "success")
 end)
 
 register("truck", "/truck", function(player, _args)
 	if workspace:GetAttribute("TruckActive") then
-		notify(player, "[Admin] the truck is already here", "info")
+		Notify.To(player, "[Admin] the truck is already here", "info")
 		return
 	end
 	workspace:SetAttribute("TruckNextAt", 0)
-	notify(player, "[Admin] truck incoming", "success")
+	Notify.To(player, "[Admin] truck incoming", "success")
 end)
 
 register("admin", "/admin  (this list)", function(player, _args)
@@ -300,7 +288,7 @@ register("admin", "/admin  (this list)", function(player, _args)
 	for _, name in order do
 		table.insert(lines, commands[name].usage)
 	end
-	notify(player, table.concat(lines, "\n"), "info")
+	Notify.To(player, table.concat(lines, "\n"), "info")
 end)
 
 ----------------------------------------------------------------------------- dispatch
@@ -325,13 +313,13 @@ local function run(player: Player, text: string)
 		return -- silent: normal players never learn the commands exist
 	end
 	if not DataService:Get(player) then
-		notify(player, "[Admin] data not loaded yet", "error")
+		Notify.To(player, "[Admin] data not loaded yet", "error")
 		return
 	end
 	local ok, err = pcall(cmd.run :: any, player, args)
 	if not ok then
 		warn(`[AdminService] {first} failed: {err}`)
-		notify(player, `[Admin] {first} failed, see Output`, "error")
+		Notify.To(player, `[Admin] {first} failed, see Output`, "error")
 	end
 end
 

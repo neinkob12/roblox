@@ -6,7 +6,7 @@
 --   data                    the player's profile data (or the client mirror)
 --   player attributes       Pass_DoubleCash (bool), FriendCount (number)
 --   workspace attributes    EventId (string, "" when none)
---   data.boosts             { [boostId] = { kind = "cash" | "production", mult = number, expires = os.time() } }
+--   data.boosts             { [boostId] = { kind = "cash" | "production", mult = number, expires = Multipliers.Now() + s } }
 
 local Economy = require(script.Parent.Config.Economy)
 local Upgrades = require(script.Parent.Config.Upgrades)
@@ -14,7 +14,8 @@ local Events = require(script.Parent.Config.Events)
 
 local Multipliers = {}
 
-local function activeEvent(): any
+-- The running server event (Config/Events entry) or nil. The ONE event lookup, server and client.
+function Multipliers.ActiveEvent(): any
 	local id = workspace:GetAttribute("EventId")
 	if typeof(id) == "string" and id ~= "" then
 		return Events.ById[id]
@@ -22,9 +23,15 @@ local function activeEvent(): any
 	return nil
 end
 
+-- The ONE clock for boost expiry, server and client: workspace:GetServerTimeNow() (Unix seconds,
+-- synced to the server on clients). Old saves used os.time(), which is the same scale.
+function Multipliers.Now(): number
+	return workspace:GetServerTimeNow()
+end
+
 local function boostMult(data: any, kind: string): number
 	local m = 1
-	local now = os.time()
+	local now = Multipliers.Now()
 	if data.boosts then
 		for _, b in data.boosts do
 			if b.kind == kind and b.expires > now then
@@ -44,7 +51,7 @@ function Multipliers.Cash(player: Player, data: any): number
 	if typeof(friends) == "number" then
 		m *= 1 + math.min(Economy.FriendBoost.Max, friends * Economy.FriendBoost.PerFriend)
 	end
-	local ev = activeEvent()
+	local ev = Multipliers.ActiveEvent()
 	if ev and ev.cashMultiplier then
 		m *= ev.cashMultiplier
 	end
@@ -54,7 +61,7 @@ end
 function Multipliers.Production(_player: Player, data: any): number
 	local lvl = (data.upgrades and data.upgrades.pipeSpeed) or 0
 	local m = 1 + lvl * Upgrades.ById.pipeSpeed.perLevel
-	local ev = activeEvent()
+	local ev = Multipliers.ActiveEvent()
 	if ev and ev.productionMultiplier then
 		m *= ev.productionMultiplier
 	end

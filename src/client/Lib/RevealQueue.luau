@@ -10,6 +10,10 @@
 -- CrateOpened and CowDiscovered in the same moment; the short START_DELAY lets both arrive so
 -- the spin plays first and the "NEW COW!" reveal follows it instead of spoiling the result.
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Safe = require(ReplicatedStorage.Shared.Safe)
+
 local START_DELAY = 0.15
 local GAP = 0.15
 
@@ -51,10 +55,7 @@ local function pump()
 			if not item then
 				break
 			end
-			local ok, err = pcall(item.fn :: any)
-			if not ok then
-				warn(`[RevealQueue] reveal failed: {err}`)
-			end
+			Safe.Run("RevealQueue reveal", item.fn)
 			task.wait(GAP)
 		end
 		running = false

@@ -48,8 +48,10 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
 local Quests = require(ReplicatedStorage.Shared.Config.Quests)
 local DataService = require(script.Parent.DataService)
-local HerdUtil = require(script.Parent.HerdUtil)
-local CodesService = require(script.Parent.CodesService)
+local Notify = require(script.Parent.Parent.Util.Notify)
+local Debounce = require(script.Parent.Parent.Util.Debounce)
+local Rewards = require(script.Parent.Parent.Util.Rewards)
+local Safe = require(ReplicatedStorage.Shared.Safe)
 
 local QuestService = {}
 
@@ -202,7 +204,7 @@ local function track(player: Player)
 					q.progress = math.min(q.target, q.progress + delta)
 					changed = true
 					if q.progress >= q.target then
-						HerdUtil.Notify(player, `Quest complete: {q.text}! Claim your reward`, "success")
+						Notify.To(player, `Quest complete: {q.text}! Claim your reward`, "success")
 					end
 				end
 			end
@@ -217,7 +219,7 @@ local function claim(player: Player, questId: any)
 	if typeof(questId) ~= "string" or #questId > 20 then
 		return
 	end
-	if not HerdUtil.Debounce(player, "claimQuest", 0.3) then
+	if not Debounce.Try(player, "claimQuest", 0.3) then
 		return
 	end
 	local data = DataService:Get(player)
@@ -236,12 +238,12 @@ local function claim(player: Player, questId: any)
 	end
 	local q = data.quests.active[index]
 	if q.progress < q.target then
-		HerdUtil.Notify(player, "That quest isn't finished yet!", "error")
+		Notify.To(player, "That quest isn't finished yet!", "error")
 		return
 	end
 	-- replace first, then grant: a second claim with the same id can never pay twice
 	data.quests.active[index] = newQuest(player, data, activeTypes(data, index))
-	local text = CodesService:GrantReward(player, q.reward, "quest_" .. (q.reward.boostKind or "x"))
+	local text = Rewards.Grant(player, q.reward, "quest_" .. (q.reward.boostKind or "x"))
 	if q.reward.kind == "cash" then
 		-- quest cash must not count toward "Earn N cash" quests
 		local b = baselines[player]
@@ -250,7 +252,7 @@ local function claim(player: Player, questId: any)
 		end
 	end
 	DataService:Replicate(player, "quests")
-	HerdUtil.Notify(player, `Quest reward: {text or q.rewardText}`, "success")
+	Notify.To(player, `Quest reward: {text or q.rewardText}`, "success")
 end
 
 function QuestService:Start()
@@ -267,10 +269,7 @@ function QuestService:Start()
 	while true do
 		task.wait(Quests.TrackSeconds)
 		for _, player in Players:GetPlayers() do
-			local ok, err = pcall(track :: any, player)
-			if not ok then
-				warn(`[QuestService] track failed for {player.Name}: {err}`)
-			end
+			Safe.Run("QuestService track", track, player)
 		end
 	end
 end

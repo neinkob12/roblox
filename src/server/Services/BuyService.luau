@@ -12,8 +12,12 @@ local Safe = require(ReplicatedStorage.Shared.Safe)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
-local HerdUtil = require(script.Parent.HerdUtil)
 local Pricing = require(ReplicatedStorage.Shared.Pricing)
+local Notify = require(script.Parent.Parent.Util.Notify)
+local PlotService = require(script.Parent.PlotService)
+local Pads = require(script.Parent.Parent.Util.Pads)
+local Rewards = require(script.Parent.Parent.Util.Rewards)
+local Net = require(ReplicatedStorage.Shared.Net)
 
 local AFFORD_COLOR = Color3.fromRGB(120, 255, 120)
 local POOR_COLOR = Color3.fromRGB(255, 110, 110)
@@ -26,7 +30,7 @@ end
 
 function BuyService:RefreshLabels(player: Player)
 	local data = DataService:Get(player)
-	local plot = HerdUtil.GetPlot(player)
+	local plot = PlotService:GetPlot(player)
 	if not data or not plot then
 		return
 	end
@@ -35,7 +39,7 @@ function BuyService:RefreshLabels(player: Player)
 		if pad then
 			local price = BuyService:Price(data.cowsBought, n)
 			local color = if data.cash >= price then AFFORD_COLOR else POOR_COLOR
-			HerdUtil.SetLabel(pad, `Buy x{n}\n{Format.Cash(price)}`, color)
+			Pads.SetLabel(pad, `Buy x{n}\n{Format.Cash(price)}`, color)
 		end
 	end
 end
@@ -47,20 +51,20 @@ local function buy(player: Player, n: number)
 	end
 	local price = BuyService:Price(data.cowsBought, n)
 	if not DataService:SpendCash(player, price) then
-		HerdUtil.Notify(player, `Not enough cash! Need {Format.Cash(price)}`, "error")
+		Notify.To(player, `Not enough cash! Need {Format.Cash(price)}`, "error")
 		return
 	end
 	data.cowsBought += n
 	DataService:Replicate(player, "cowsBought")
-	HerdUtil.GiveCow(player, 1, n)
-	HerdUtil.Notify(player, `+{n} cow{if n == 1 then "" else "s"}!`, "success")
-	require(ReplicatedStorage.Shared.Net).Event("Fx"):FireClient(player, "buy", { count = n })
+	Rewards.Cow(player, 1, n)
+	Notify.To(player, `+{n} cow{if n == 1 then "" else "s"}!`, "success")
+	Net.Event("Fx"):FireClient(player, "buy", { count = n })
 	BuyService:RefreshLabels(player)
 end
 
 function BuyService:Start()
 	for _, n in Economy.BuyPads do
-		HerdUtil.BindPad("BuyPad" .. n, function(player)
+		Pads.BindPlotPad("BuyPad" .. n, function(player)
 			buy(player, n)
 		end)
 	end

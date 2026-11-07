@@ -9,12 +9,13 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Cows = require(ReplicatedStorage.Shared.Config.Cows)
-local CowModels = require(ReplicatedStorage.Shared.CowModels)
 local Format = require(ReplicatedStorage.Shared.Format)
-local Theme = require(script.Parent.Theme)
-local C = require(script.Parent.Components)
+local Theme = require(script.Parent.Parent.Lib.Theme)
+local C = require(script.Parent.Parent.Lib.UiKit)
+local Panels = require(script.Parent.Components)
 local DataController = require(script.Parent.Parent.Controllers.DataController)
 local DiscoveryController = require(script.Parent.Parent.Controllers.DiscoveryController)
+local CowViewport = require(script.Parent.Parent.Lib.CowViewport)
 
 local Colors = Theme.Colors
 
@@ -50,24 +51,7 @@ local function buildViewport(cell: Cell, tier: number)
 		return
 	end
 	cell.built = true
-	local ok, model = pcall(CowModels.Build, tier)
-	if not ok or not model then
-		warn(`[IndexPanel] could not build cow {tier}: {model}`)
-		return
-	end
-	local vp = cell.viewport
-	local cam = Instance.new("Camera")
-	cam.FieldOfView = 40
-	cam.Parent = vp
-	vp.CurrentCamera = cam
-	model:PivotTo(CFrame.identity)
-	model.Parent = vp
-	local boxCF, boxSize = model:GetBoundingBox()
-	local center = boxCF.Position
-	local radius = boxSize.Magnitude * 0.5
-	local dist = radius / math.tan(math.rad(cam.FieldOfView / 2)) * 1.05
-	local dir = Vector3.new(-0.55, 0.3, -1).Unit
-	cam.CFrame = CFrame.lookAt(center + dir * dist, center)
+	CowViewport.Mount(cell.viewport, tier)
 end
 
 local function refresh()
@@ -102,7 +86,7 @@ local function refresh()
 end
 
 function IndexPanel:Init()
-	local _, body = C.Panel("Index", "COW INDEX", Vector2.new(600, 380), Colors.Orange)
+	local _, body = Panels.Panel("Index", "COW INDEX", Vector2.new(600, 380), Colors.Orange)
 
 	-- header: progress text over a bar
 	local bar = Instance.new("Frame")
@@ -169,9 +153,6 @@ function IndexPanel:Init()
 		vp.BackgroundTransparency = 1
 		vp.Size = UDim2.new(1, -8, 1, -50)
 		vp.Position = UDim2.fromOffset(4, 4)
-		vp.Ambient = Color3.fromRGB(170, 170, 180)
-		vp.LightColor = Color3.fromRGB(255, 250, 240)
-		vp.LightDirection = Vector3.new(-1, -1.5, -1)
 		vp.ImageColor3 = Color3.new(0, 0, 0)
 		vp.ZIndex = 3
 		vp.Active = false
@@ -211,7 +192,7 @@ function IndexPanel:Init()
 			if not isDiscovered(DataController:Get(), t) then
 				return
 			end
-			C.ClosePanel()
+			Panels.ClosePanel()
 			DiscoveryController:Show(t)
 		end)
 
@@ -222,7 +203,7 @@ end
 
 function IndexPanel:Start()
 	DataController:OnChanged("discovered", refresh)
-	C.OnPanelOpened("Index", function()
+	Panels.OnPanelOpened("Index", function()
 		built = true
 		refresh()
 	end)

@@ -3,10 +3,10 @@
 -- Owner: A3.
 --
 --   ProductionService:GetMilkPerSecond(player, data) -> number
---   ProductionService:GetTankCapacity(player, data)  -> number
+--   Capacity.TankCapacity(player, data)  -> number
 --   ProductionService:MarkTankDirty(player)            (replicate tankMilk on the next flush, max every 0.5s)
 --
--- Player attributes set here: MilkPerSecond, TankCapacity.
+-- Player attributes set here: MilkPerSecond, TankCapacity (formulas in shared/Capacity).
 -- Also: rare milk rolls (golden / diamond) and offline earnings on join.
 
 local Players = game:GetService("Players")
@@ -16,44 +16,24 @@ local Net = require(ReplicatedStorage.Shared.Net)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
-local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
-local Events = require(ReplicatedStorage.Shared.Config.Events)
 local DataService = require(script.Parent.DataService)
+local Notify = require(script.Parent.Parent.Util.Notify)
+local Capacity = require(ReplicatedStorage.Shared.Capacity)
+local Safe = require(ReplicatedStorage.Shared.Safe)
 
 local ProductionService = {}
 
 local dirty: { [Player]: boolean } = {}
 local rng = Random.new()
 
-function ProductionService:GetMilkPerSecond(player: Player, data: any): number
-	return Multipliers.MilkPerSecond(player, data)
-end
-
-function ProductionService:GetTankCapacity(player: Player, data: any): number
-	local mps = Multipliers.MilkPerSecond(player, data)
-	local lvl = (data.upgrades and data.upgrades.tankCapacity) or 0
-	local base = math.max(Economy.Tank.MinCapacity, mps * Economy.Tank.BaseSeconds)
-	return base * (1 + lvl * Upgrades.ById.tankCapacity.perLevel)
-end
-
 function ProductionService:MarkTankDirty(player: Player)
 	dirty[player] = true
 end
 
-local function rareChanceMultiplier(): number
-	local id = workspace:GetAttribute("EventId")
-	if typeof(id) == "string" and id ~= "" then
-		local ev: any = Events.ById[id]
-		if ev and ev.rareChanceMultiplier then
-			return ev.rareChanceMultiplier
-		end
-	end
-	return 1
-end
-
 -- Returns the rare milk entry rolled this tick, or nil. Rarest is checked first.
 local function rollRare(): any
-	local mult = rareChanceMultiplier()
+	local ev = Multipliers.ActiveEvent()
+	local mult = if ev and ev.rareChanceMultiplier then ev.rareChanceMultiplier else 1
 	local list = table.clone(Economy.RareMilk)
 	table.sort(list, function(a, b)
 		return a.chance < b.chance
@@ -72,7 +52,7 @@ local function tickPlayer(player: Player, dt: number)
 		return
 	end
 	local mps = Multipliers.MilkPerSecond(player, data)
-	local capacity = ProductionService:GetTankCapacity(player, data)
+	local capacity = Capacity.TankCapacity(player, data)
 	player:SetAttribute("MilkPerSecond", mps)
 	player:SetAttribute("TankCapacity", capacity)
 
@@ -94,39 +74,31 @@ local function tickPlayer(player: Player, dt: number)
 	end
 	if rare then
 		local gained = newValue - current
-		Net.Event("Notify")
-			:FireClient(player, `{rare.name}! x{rare.multiplier} (+{Format.Number(gained)} milk)`, "rare")
+		Notify.To(player, `{rare.name}! x{rare.multiplier} (+{Format.Number(gained)} milk)`, "rare")
 		Net.Event("Fx"):FireClient(player, "rare", { kind = rare.id })
 	end
 end
 
-local function applyOffline(player: Player, data: any)
-	local last = data.lastOnline or 0
-	if last == 0 then
-		return
-	end
-	local elapsed = math.min(os.time() - last, Economy.Offline.MaxSeconds)
-	if elapsed <= 0 then
-		return
-	end
-	local mps = Multipliers.MilkPerSecond(player, data)
-	local capacity = ProductionService:GetTankCapacity(player, data)
-	local current = data.tankMilk or 0
-	local room = math.max(0, capacity - current)
-	local milk = math.min(room, mps * elapsed * Economy.Offline.Efficiency)
+-- Adds `seconds` of offline milk to the tank and shows the welcome-back popup. Used on join and by /offline.
+function ProductionService:GrantOffline(player: Player, data: any, seconds: number): (number, number)
+	local milk, elapsed = Capacity.OfflineMilk(player, data, seconds)
 	if milk <= 0 then
-		return
+		return 0, elapsed
 	end
-	data.tankMilk = current + milk
+	data.tankMilk = (data.tankMilk or 0) + milk
 	DataService:Replicate(player, "tankMilk")
 	Net.Event("OfflineEarnings"):FireClient(player, milk, elapsed)
+	return milk, elapsed
 end
 
 function ProductionService:Init()
 	DataService.PlayerLoaded:Connect(function(player: Player, data: any)
-		applyOffline(player, data)
+		local last = data.lastOnline or 0
+		if last > 0 then
+			ProductionService:GrantOffline(player, data, os.time() - last)
+		end
 		player:SetAttribute("MilkPerSecond", Multipliers.MilkPerSecond(player, data))
-		player:SetAttribute("TankCapacity", ProductionService:GetTankCapacity(player, data))
+		player:SetAttribute("TankCapacity", Capacity.TankCapacity(player, data))
 	end)
 	Players.PlayerRemoving:Connect(function(player)
 		dirty[player] = nil
@@ -155,10 +127,7 @@ function ProductionService:Start()
 		local dt = math.min(now - last, Economy.Tank.TickSeconds * 3)
 		last = now
 		for _, player in Players:GetPlayers() do
-			local ok, err = pcall(tickPlayer :: any, player, dt)
-			if not ok then
-				warn(`[ProductionService] tick failed for {player.Name}: {err}`)
-			end
+			Safe.Run("ProductionService tick", tickPlayer, player, dt)
 		end
 	end
 end

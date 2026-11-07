@@ -18,8 +18,8 @@ local RunService = game:GetService("RunService")
 local Net = require(ReplicatedStorage.Shared.Net)
 local Tutorial = require(ReplicatedStorage.Shared.Config.Tutorial)
 local DataController = require(script.Parent.DataController)
-local C = require(script.Parent.Parent.UI.Components)
-local Theme = require(script.Parent.Parent.UI.Theme)
+local C = require(script.Parent.Parent.Lib.UiKit)
+local Theme = require(script.Parent.Parent.Lib.Theme)
 
 local player = Players.LocalPlayer
 local Colors = Theme.Colors

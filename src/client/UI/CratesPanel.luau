@@ -4,24 +4,24 @@
 --   Buy price mirrors A4 CrateService:BuyPrice = max(BuyBasePrice, MilkPerSecond * BuyPriceSecondsOfProduction)
 --   (the MilkPerSecond player attribute already includes the multipliers).
 --   Spin: on CrateOpened(tier, source) a reel of colored cow cards scrolls and lands on the
---   result, then the real cow model (CowModels.Build in a ViewportFrame) pops up.
+--   result, then the real cow model (Lib/CowViewport) pops up.
 --   Several results in a row are queued in the shared RevealQueue (C6), so a "NEW COW!"
 --   discovery from the same crate plays after the spin instead of on top of it.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 
 local Net = require(ReplicatedStorage.Shared.Net)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Pricing = require(ReplicatedStorage.Shared.Pricing)
 local Cows = require(ReplicatedStorage.Shared.Config.Cows)
-local CowModels = require(ReplicatedStorage.Shared.CowModels)
-local Theme = require(script.Parent.Theme)
+local Theme = require(script.Parent.Parent.Lib.Theme)
 local RevealQueue = require(script.Parent.Parent.Lib.RevealQueue)
-local C = require(script.Parent.Components)
+local C = require(script.Parent.Parent.Lib.UiKit)
+local Panels = require(script.Parent.Components)
 local Menu = require(script.Parent.Menu)
 local DataController = require(script.Parent.Parent.Controllers.DataController)
+local CowViewport = require(script.Parent.Parent.Lib.CowViewport)
 local SoundController = require(script.Parent.Parent.Controllers.SoundController)
 
 local player = Players.LocalPlayer
@@ -105,36 +105,6 @@ local function cowCard(parent: Instance, tier: number, w: number, h: number): Fr
 	})
 	card.Parent = parent
 	return card
-end
-
-local function cowViewport(parent: Instance, tier: number): RBXScriptConnection?
-	local ok, model = pcall(CowModels.Build, tier)
-	if not ok or not model then
-		return nil
-	end
-	local vp = Instance.new("ViewportFrame")
-	vp.Name = "Cow"
-	vp.BackgroundTransparency = 1
-	vp.Size = UDim2.fromScale(1, 1)
-	vp.Ambient = Color3.fromRGB(170, 170, 180)
-	vp.LightColor = Color3.fromRGB(255, 250, 240)
-	vp.LightDirection = Vector3.new(-1, -1.5, -1)
-	vp.Parent = parent
-	local cam = Instance.new("Camera")
-	cam.FieldOfView = 40
-	cam.Parent = vp
-	vp.CurrentCamera = cam
-	model:PivotTo(CFrame.identity)
-	model.Parent = vp
-	local boxCF, boxSize = model:GetBoundingBox()
-	local center = boxCF.Position
-	local dist = boxSize.Magnitude * 0.5 / math.tan(math.rad(cam.FieldOfView / 2)) * 1.05
-	local start = os.clock()
-	return RunService.RenderStepped:Connect(function()
-		local a = (os.clock() - start) * 1.4
-		cam.CFrame =
-			CFrame.lookAt(center + Vector3.new(math.sin(a) * dist, boxSize.Y * 0.25, -math.cos(a) * dist), center)
-	end)
 end
 
 local function playSpin(tier: number, source: string)
@@ -227,7 +197,7 @@ local function playSpin(tier: number, source: string)
 	holder.BackgroundTransparency = 1
 	holder.Size = UDim2.new(1, 0, 1, -50)
 	holder.Parent = reveal
-	local spinConn = cowViewport(holder, tier)
+	local stopCow = CowViewport.Mount(holder, tier, { spin = 1.4 })
 	local s = Instance.new("UIScale")
 	s.Scale = 0.3
 	s.Parent = reveal
@@ -255,13 +225,11 @@ local function playSpin(tier: number, source: string)
 			return
 		end
 		done = true
-		if spinConn then
-			spinConn:Disconnect()
-		end
 		hint.Visible = false
 		C.Tween(s, 0.2, { Scale = 0.5 }, Enum.EasingStyle.Back, Enum.EasingDirection.In)
 		C.Tween(overlay, 0.25, { BackgroundTransparency = 1 })
 		task.wait(0.25)
+		stopCow()
 		overlay:Destroy()
 	end
 	local unlocked = false
@@ -283,7 +251,7 @@ end
 ------------------------------------------------------------------------------ panel
 
 function CratesPanel:Init()
-	local _, body = C.Panel("Crates", "MYSTERY CRATES", Vector2.new(460, 300), Colors.Yellow)
+	local _, body = Panels.Panel("Crates", "MYSTERY CRATES", Vector2.new(460, 300), Colors.Yellow)
 
 	local icon = C.Label(body, {
 		name = "Icon",
@@ -347,7 +315,7 @@ function CratesPanel:Start()
 	DataController:OnChanged("cash", refresh)
 	DataController:OnChanged("cratesBought", refresh)
 	player:GetAttributeChangedSignal("MilkPerSecond"):Connect(refresh)
-	C.OnPanelOpened("Crates", refresh)
+	Panels.OnPanelOpened("Crates", refresh)
 	Net.Event("CrateOpened").OnClientEvent:Connect(function(tier: number, source: string)
 		if typeof(tier) ~= "number" or not Cows.Get(tier) then
 			return

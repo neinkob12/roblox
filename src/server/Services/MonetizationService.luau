@@ -20,19 +20,17 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
 
-local Net = require(ReplicatedStorage.Shared.Net)
 local Products = require(ReplicatedStorage.Shared.Config.Products)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
 local DataService = require(script.Parent.DataService)
+local Notify = require(script.Parent.Parent.Util.Notify)
+local Rewards = require(script.Parent.Parent.Util.Rewards)
+local CrateService = require(script.Parent.CrateService)
 
 local SAVE_WAIT_TIMEOUT = 60 -- seconds to wait for the save before telling Roblox to retry later
 
 local MonetizationService = {}
-
-local function notify(player: Player, text: string, kind: string)
-	Net.Event("Notify"):FireClient(player, text, kind)
-end
 
 -- Gamepasses ------------------------------------------------------------------------------
 
@@ -87,7 +85,7 @@ local function onPassPurchaseFinished(player: Player, passId: number, wasPurchas
 		return
 	end
 	setPass(player, key, true)
-	notify(player, `Thanks! {Products.Passes[key].name} is now active!`, "success")
+	Notify.To(player, `Thanks! {Products.Passes[key].name} is now active!`, "success")
 end
 
 function MonetizationService:OwnsPass(player: Player, passKey: string): boolean
@@ -102,8 +100,9 @@ local function grantCash(player: Player, data: any, key: string)
 	local entry = Products.DevProducts[key]
 	local amount =
 		Products.CashPackAmount(Multipliers.MilkPerSecond(player, data), Multipliers.Cash(player, data), entry)
-	DataService:AddCash(player, amount)
-	notify(player, `+{Format.Cash(amount)} from {entry.name}!`, "success")
+	-- bought with Robux: not "earned", so it never counts toward the leaderboard or cash quests
+	Rewards.Cash(player, amount, false)
+	Notify.To(player, `+{Format.Cash(amount)} from {entry.name}!`, "success")
 end
 
 local GRANTS: { [string]: (Player, any) -> () } = {
@@ -116,38 +115,21 @@ local GRANTS: { [string]: (Player, any) -> () } = {
 	CashLarge = function(player, data)
 		grantCash(player, data, "CashLarge")
 	end,
-	PremiumCrate = function(player, data)
-		local crateModule = script.Parent:FindFirstChild("CrateService")
-		local crateService: any = nil
-		if crateModule and crateModule:IsA("ModuleScript") then
-			crateService = require(script.Parent.CrateService)
-		end
-		if crateService and type(crateService.GiveCrate) == "function" then
-			-- opens immediately with better odds, fires CrateOpened(tier, "premium") for the spin UI
-			crateService:GiveCrate(player, true)
-		else
-			data.crates = (data.crates or 0) + 1
-			DataService:Replicate(player, "crates")
-			notify(player, "You got a Premium Milk Crate!", "success")
+	PremiumCrate = function(player, _data)
+		-- opens immediately with better odds, fires CrateOpened(tier, "premium") for the spin UI
+		if not CrateService:GiveCrate(player, true) then
+			error("PremiumCrate could not be granted") -- NotProcessedYet: Roblox retries the receipt
 		end
 	end,
-	Boost3x = function(player, data)
+	Boost3x = function(player, _data)
 		local entry = Products.DevProducts.Boost3x
-		local now = os.time()
-		data.boosts = data.boosts or {}
-		local existing = data.boosts[Products.Boost3xKey]
-		local base = now
-		if existing and type(existing.expires) == "number" and existing.expires > now then
-			base = existing.expires -- stack time on an active boost
+		local expires =
+			Rewards.Boost(player, Products.Boost3xKey, "cash", Products.Boost3xMult, entry.boostSeconds or 0)
+		if not expires then
+			error("Boost3x could not be granted") -- NotProcessedYet: Roblox retries the receipt
 		end
-		data.boosts[Products.Boost3xKey] = {
-			kind = "cash",
-			mult = Products.Boost3xMult,
-			expires = base + (entry.boostSeconds or 0),
-		}
-		DataService:Replicate(player, "boosts")
-		local minutes = math.floor(((base + (entry.boostSeconds or 0)) - now) / 60 + 0.5)
-		notify(player, `3x Cash active for {minutes} min!`, "success")
+		local minutes = math.floor((expires - Multipliers.Now()) / 60 + 0.5)
+		Notify.To(player, `3x Cash active for {minutes} min!`, "success")
 	end,
 }
 

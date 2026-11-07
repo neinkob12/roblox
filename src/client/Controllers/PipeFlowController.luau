@@ -24,6 +24,8 @@ local plot: Model? = nil
 local beadFolder: Folder? = nil
 local tankMilk = 0
 local displayedRatio = 0
+local appliedRatio = -1 -- last ratio written to the Fill part (-1 = never)
+local pipes: { BasePart } = {} -- cached per plot
 
 -- Fill geometry captured once per plot
 type FillInfo = {
@@ -98,9 +100,10 @@ end
 
 local function applyFill(ratio: number)
 	local info = fillInfo
-	if not info or not info.fill.Parent then
+	if not info or not info.fill.Parent or math.abs(ratio - appliedRatio) < 1e-4 then
 		return
 	end
+	appliedRatio = ratio
 	local h = math.max(MIN_FILL, info.maxHeight * math.clamp(ratio, 0, 1))
 	info.fill.Size = withAxis(info.fill.Size, info.upAxis, h)
 	info.fill.CFrame = CFrame.new(info.bottom + Vector3.yAxis * (h / 2)) * info.baseCFrame
@@ -176,13 +179,19 @@ local function spawnBead(pipe: BasePart, tankPos: Vector3?, color: Color3)
 	tween:Play()
 end
 
+-- Risers carry a "Stall" attribute (tier). They only flow when that stall has a cow.
+local function pipeHasMilk(pipe: BasePart, cows: { [string]: number }): boolean
+	local tier = pipe:GetAttribute("Stall")
+	return typeof(tier) ~= "number" or (cows[tostring(tier)] or 0) > 0
+end
+
 local function pipeParts(p: Model): { BasePart }
 	local list: { BasePart } = {}
-	local pipes = p:FindFirstChild("Pipes")
-	if not pipes then
+	local folder = p:FindFirstChild("Pipes") or p:WaitForChild("Pipes", 10)
+	if not folder then
 		return list
 	end
-	for _, d in pipes:GetDescendants() do
+	for _, d in folder:GetDescendants() do
 		if d:IsA("BasePart") then
 			table.insert(list, d)
 		end
@@ -202,6 +211,8 @@ end
 local function setPlot(id: any)
 	plot = nil
 	fillInfo = nil
+	pipes = {}
+	appliedRatio = -1
 	if typeof(id) ~= "number" then
 		return
 	end
@@ -213,6 +224,7 @@ local function setPlot(id: any)
 		if tank then
 			tank:WaitForChild("Fill", 10)
 		end
+		pipes = pipeParts(p)
 		fillInfo = captureFill(p)
 		if not fillInfo then
 			warn("[PipeFlowController] Tank.Shell / Tank.Fill missing on " .. p.Name)
@@ -256,8 +268,12 @@ function PipeFlowController:Start()
 		local p = plot
 		if p and p.Parent and flowing() then
 			local tankPos = tankPosition(p)
-			for _, pipe in pipeParts(p) do
-				spawnBead(pipe, tankPos, milkColor)
+			local data = DataController:Get()
+			local cows = (data and data.cows) or {}
+			for _, pipe in pipes do
+				if pipe.Parent and pipeHasMilk(pipe, cows) then
+					spawnBead(pipe, tankPos, milkColor)
+				end
 			end
 		end
 	end

@@ -21,6 +21,8 @@ local StarterGui = game:GetService("StarterGui")
 local TextChatService = game:GetService("TextChatService")
 local TweenService = game:GetService("TweenService")
 
+local C = require(script.Parent.Parent.Lib.UiKit)
+
 local player = Players.LocalPlayer
 
 local TrailerCamController = {}
@@ -264,21 +266,14 @@ end
 local function makeButton(parent: Instance, text: string, onClick: () -> ()): TextButton
 	local b = Instance.new("TextButton")
 	b.Text = text
-	b.Font = Enum.Font.FredokaOne
+	b.Font = C.Theme.Font
 	b.TextScaled = true
 	b.TextColor3 = Color3.new(1, 1, 1)
 	b.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
 	b.BackgroundTransparency = 0.25
 	b.AutoButtonColor = true
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 10)
-	corner.Parent = b
-	local pad = Instance.new("UIPadding")
-	pad.PaddingLeft = UDim.new(0, 6)
-	pad.PaddingRight = UDim.new(0, 6)
-	pad.PaddingTop = UDim.new(0, 6)
-	pad.PaddingBottom = UDim.new(0, 6)
-	pad.Parent = b
+	C.Corner(b, 10)
+	C.Padding(b, 6)
 	b.Activated:Connect(onClick)
 	b.Parent = parent
 	return b
@@ -296,7 +291,7 @@ local function buildGui(): ScreenGui
 	sg.Name = "TrailerCamGui"
 	sg.ResetOnSpawn = false
 	sg.IgnoreGuiInset = true
-	sg.DisplayOrder = 1000
+	sg.DisplayOrder = C.Layers.Trailer
 	sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 	sg.Enabled = false
 
@@ -319,11 +314,7 @@ local function buildGui(): ScreenGui
 	inner.Name = "Inner"
 	inner.BackgroundTransparency = 1
 	inner.Parent = frame
-	local stroke = Instance.new("UIStroke")
-	stroke.Color = Color3.new(1, 1, 1)
-	stroke.Thickness = 2
-	stroke.Transparency = 0.3
-	stroke.Parent = inner
+	C.Stroke(inner, 2, Color3.new(1, 1, 1)).Transparency = 0.3
 	-- Shorts UI covers roughly the bottom 20% and the right edge: mark it
 	local bottom = Instance.new("Frame")
 	bottom.Name = "ShortsUiZone"
@@ -343,7 +334,7 @@ local function buildGui(): ScreenGui
 	t.Position = UDim2.new(0.5, 0, 0, 16)
 	t.Size = UDim2.new(0.5, 0, 0, 40)
 	t.BackgroundTransparency = 1
-	t.Font = Enum.Font.FredokaOne
+	t.Font = C.Theme.Font
 	t.TextScaled = true
 	t.TextColor3 = Color3.new(1, 1, 1)
 	t.TextTransparency = 1
