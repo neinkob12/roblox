@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Brainrot Cow Farm balance simulator (B4). Python 3.8+, no dependencies.
 
-Reads the REAL tuning numbers from src/shared/Config/{Economy,Cows,Upgrades,Events}.luau
-(via tools/luau_config.py) and re-implements the server formulas from:
+Reads the REAL tuning numbers from src/shared/Config/{Economy,Cows,Upgrades,Events,Pets,Eggs,
+IndexRewards}.luau (via tools/luau_config.py) and re-implements the server formulas from:
 
   ProductionService  tank fill, tank capacity, rare milk rolls
   CanService         can capacity, tank tap, Auto Collect upgrade
@@ -12,7 +12,9 @@ Reads the REAL tuning numbers from src/shared/Config/{Economy,Cows,Upgrades,Even
   CrateService       drops, buy price, odds relative to best tier
   UpgradeService     upgrade costs
   RebirthService     cost, reset, cash multiplier
-  Multipliers        cash and production multipliers (events included)
+  Multipliers        cash and production multipliers (events, pets, pet index, Index cash bonus)
+  EggService         free egg, egg prices (Pricing.Egg), nests, hatch odds (Odds.Egg with luck)
+  PetService         inventory cap, equip slots, 5 -> 1 variant merge, pet index
 
 KEEP IN SYNC: formulas live in the functions marked `# == <Service>` below. Config numbers are
 parsed, so tuning Config/*.luau needs no change here. World distances (WALK_*) come from
@@ -21,6 +23,9 @@ MapBuilder / PlotBuilder and are duplicated below.
 The simulated player is "reasonable": walks the tank -> dairy loop, merges every plot visit,
 buys whatever pays back fastest (cows, crates, upgrades) unless saving for a rebirth is faster,
 and rebirths as soon as it can afford it. No Robux, no friends, no offline time.
+With pets on (default) it also claims every free egg, buys the best unlocked egg whenever one costs
+at most EGG_CASH_FRACTION of its cash and fits a budget of EGG_BUDGET_SHARE of all cash earned, hatches on every plot visit, merges every 5 identical pets,
+and equips the milk/cash mix that maximizes income (pets survive rebirth).
 
 Usage:
   python3 tools/balance_sim.py                      # 8 seeds, 72 h of play
@@ -29,6 +34,9 @@ Usage:
   python3 tools/balance_sim.py --proposed           # with B4's proposed tuning (tools/BALANCE.md)
   python3 tools/balance_sim.py --double-cash         # 2x Cash gamepass player
   python3 tools/balance_sim.py --trace 600           # print a state line every 600 s (seed 1)
+  python3 tools/balance_sim.py --no-pets             # the economy without pets and eggs
+  python3 tools/balance_sim.py --compare             # no pets vs pets milestone table
+  python3 tools/balance_sim.py --set Eggs.List.2.priceSeconds=900 --set Pets.MilkCap=2
 """
 
 from __future__ import annotations
@@ -39,7 +47,7 @@ import random
 import statistics
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 sys.dont_write_bytecode = True  # keep tools/ free of __pycache__
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -62,6 +70,10 @@ DECIDE_EVERY = 5  # seconds between shopping decisions (UI purchases work anywhe
 AUTO_PLOT_VISIT_EVERY = 120  # with Auto Collect the player camps at the dairy, visits plot this often
 MAX_CASH_WAIT = 15  # seconds the player waits at the cash pad for the queue to finish selling
 AUTO_COLLECT_CONVENIENCE = 0.5  # players value Auto Collect at ~50% of income even if it adds no rate
+EGG_CASH_FRACTION = 0.25  # buy the best unlocked egg when it costs at most this share of cash (--egg-cash-fraction)
+# ... AND it fits an egg budget of this share of all cash earned so far. Without the budget, nests free
+# up every 60 s and the cash rule alone parks cash at 4x the egg price forever (rebirths stall).
+EGG_BUDGET_SHARE = 0.15
 
 
 # Keys that do NOT exist in Config yet. The sim understands them so proposed tuning can be tested
@@ -128,11 +140,34 @@ def apply_override(cfg: Dict[str, Any], spec: str) -> None:
 
 
 class Sim:
-    def __init__(self, cfg: Dict[str, Any], seed: int, double_cash: bool = False, events: bool = True):
+    def __init__(
+        self,
+        cfg: Dict[str, Any],
+        seed: int,
+        double_cash: bool = False,
+        events: bool = True,
+        pets: bool = True,
+        egg_cash_fraction: float = EGG_CASH_FRACTION,
+        egg_budget: float = EGG_BUDGET_SHARE,
+        pet_release: bool = False,
+    ):
         self.cfg = cfg
+        self.egg_budget = egg_budget
+        self.pet_release = pet_release
         self.E = cfg["Economy"]
         self.U = cfg["Upgrades"]
         self.EV = cfg["Events"]
+        self.P = cfg["Pets"]
+        self.EG = cfg["Eggs"]
+        self.IR = cfg["IndexRewards"]
+        self.pets_on = pets
+        self.egg_cash_fraction = egg_cash_fraction
+        self.rarity = {r["id"]: r for r in self.P["Rarities"]}
+        self.variant = {v["id"]: v for v in self.P["Variants"]}
+        self.pet_def = {pt["id"]: pt for pt in self.P["List"]}
+        self.by_rarity: Dict[str, List[str]] = {r["id"]: [] for r in self.P["Rarities"]}
+        for pt in self.P["List"]:
+            self.by_rarity[pt["rarity"]].append(pt["id"])
         self.growth = cfg["Cows"]["growth"]
         self.tier_count = len(cfg["Cows"]["tiers"])
         self.rng = random.Random(seed)
@@ -169,6 +204,23 @@ class Sim:
         self.cows_bought_total = 0
         self.crates_bought = 0
         self.crates_dropped = 0
+        # pets (EggService / PetService data). Kept on rebirth.
+        self.pets: Dict[Tuple[str, str], int] = {}  # (petId, variant) -> count
+        self.equipped: List[Tuple[str, str]] = []
+        self.nests: Dict[int, Tuple[str, float, float]] = {}  # nest -> (eggId, readyAt, luck)
+        self.last_free_egg = -float(self.EG["FreeEggSeconds"])  # lastFreeEgg = 0: claimable at once
+        self.pet_index: set = set()
+        self.pb = {"milk": 0.0, "cash": 0.0, "speed": 0.0, "luck": 0.0}  # Multipliers.PetBonus cache
+        self.index_milk = 1.0  # Multipliers.PetIndexMilk cache
+        self.eggs_bought: Dict[str, int] = {}
+        self.free_eggs = 0
+        self.hatched = 0
+        self.merges = 0
+        self.egg_cash_spent = 0.0
+        self.cash_earned = 0.0
+        self.milk_cap_at: Optional[int] = None
+        self.cash_cap_at: Optional[int] = None
+        self.inventory_stuck_at: Optional[int] = None
 
     # ------------------------------------------------------------------ state helpers
     def reset_run(self) -> None:
@@ -208,16 +260,24 @@ class Sim:
         m = 1 + up["pipeSpeed"] * self.U["pipeSpeed"]["perLevel"]
         if with_event and self.event and self.event.get("productionMultiplier"):
             m *= self.event["productionMultiplier"]
+        m *= (1 + self.pb["milk"]) * self.index_milk  # F1 pets
         return m
 
     def cash_mult(self, rebirths: int, with_event: bool = True) -> float:
         # == Multipliers.Cash (no friends, no boosts)
         m = 1 + self.E["Rebirth"]["CashMultiplierPerRebirth"] * rebirths
+        m *= self.index_cash_mult()  # E1: claimed Index milestones (claimed as soon as reached)
         if self.double_cash:
             m *= 2
         if with_event and self.event and self.event.get("cashMultiplier"):
             m *= self.event["cashMultiplier"]
+        m *= 1 + self.pb["cash"]  # F1 pets
         return m
+
+    def index_cash_mult(self) -> float:
+        # == IndexRewards.CashMultiplier (every reached milestone is claimed)
+        found = len(self.discovered)
+        return 1 + sum(m.get("cashBonus") or 0 for m in self.IR["Milestones"] if found >= m["count"])
 
     def mps(self, cows=None, up=None, with_event: bool = True) -> float:
         up = self.up if up is None else up
@@ -245,7 +305,8 @@ class Sim:
         return max(C["AutoCollectMinSeconds"], C["AutoCollectBaseSeconds"] - up["autoCollect"] * self.U["autoCollect"]["perLevel"])
 
     def walk_speed(self, up: Dict[str, int]) -> float:
-        return BASE_WALK_SPEED + up["walkSpeed"] * self.U["walkSpeed"]["perLevel"]  # == WalkSpeedService
+        # == WalkSpeedService (pet speed bonus included)
+        return (BASE_WALK_SPEED + up["walkSpeed"] * self.U["walkSpeed"]["perLevel"]) * (1 + self.pb["speed"])
 
     def cow_price(self, n: int = 1) -> float:
         # == BuyService:Price
@@ -284,6 +345,190 @@ class Sim:
         milk = min(mps, carry / per)
         value = min(milk, self.sell_rate(mps, up))
         return value * self.cash_mult(rebirths, with_event=False)
+
+    # ------------------------------------------------------------------ pets and eggs (F1)
+    def pet_boost(self, key: Tuple[str, str]) -> Tuple[str, float]:
+        # == Pets.Boost
+        pet = self.pet_def[key[0]]
+        r = self.rarity[pet["rarity"]]
+        base = r["boost"]
+        if pet["boost"] == "speed":
+            base = r["speedBoost"]
+        elif pet["boost"] == "luck":
+            base = r["boost"] * self.P["LuckFactor"]
+        return pet["boost"], base * self.variant[key[1]]["mult"]
+
+    def pet_slots(self) -> int:
+        # == Pets.SlotsFor
+        return int(max([row["slots"] for row in self.P["EquipSlots"] if self.rebirths >= row["rebirths"]] or [0]))
+
+    def nest_count(self) -> int:
+        # == Eggs.NestsFor
+        return int(max([row["nests"] for row in self.EG["NestSlots"] if self.rebirths >= row["rebirths"]] or [0]))
+
+    def pet_count(self) -> int:
+        return sum(self.pets.values())
+
+    def refresh_pet_bonus(self) -> None:
+        # == Multipliers.PetBonus (caps) and Multipliers.PetIndexMilk
+        caps = {"speed": self.P["SpeedCap"], "luck": self.P["LuckCap"], "milk": self.P["MilkCap"], "cash": self.P["CashCap"]}
+        total = {k: 0.0 for k in caps}
+        for key in self.equipped[: self.pet_slots()]:
+            kind, value = self.pet_boost(key)
+            total[kind] += value
+        self.pb = {k: min(v, caps[k]) for k, v in total.items()}
+        self.index_milk = 1 + self.P["IndexMilkPerStep"] * (len(self.pet_index) // int(self.P["IndexStep"]))
+        if self.milk_cap_at is None and self.pb["milk"] >= caps["milk"]:
+            self.milk_cap_at = self.t
+        if self.cash_cap_at is None and self.pb["cash"] >= caps["cash"]:
+            self.cash_cap_at = self.t
+
+    def equip_best(self) -> None:
+        """Player behaviour: the milk/cash split that maximizes (1 + milk) x (1 + cash), caps applied.
+        Spare slots (too few milk/cash pets) take the best speed, then luck pets."""
+        slots = self.pet_slots()
+        owned: Dict[str, List[Tuple[float, Tuple[str, str]]]] = {"milk": [], "cash": [], "speed": [], "luck": []}
+        for key, n in self.pets.items():
+            kind, value = self.pet_boost(key)
+            owned[kind] += [(value, key)] * n
+        for lst in owned.values():
+            lst.sort(reverse=True)
+        best, best_score = (0, 0), -1.0
+        for m in range(0, min(slots, len(owned["milk"])) + 1):
+            c = min(slots - m, len(owned["cash"]))
+            milk = min(self.P["MilkCap"], sum(v for v, _ in owned["milk"][:m]))
+            cash = min(self.P["CashCap"], sum(v for v, _ in owned["cash"][:c]))
+            score = (1 + milk) * (1 + cash) - 1e-9 * (m + c)  # fewer pets for the same score frees slots
+            if score > best_score:
+                best, best_score = (m, c), score
+        m, c = best
+        chosen = [k for _, k in owned["milk"][:m]] + [k for _, k in owned["cash"][:c]]
+        rest = owned["speed"] + owned["luck"]
+        chosen += [k for _, k in rest[: max(0, slots - len(chosen))]]
+        self.equipped = chosen
+        self.refresh_pet_bonus()
+
+    def add_pet(self, key: Tuple[str, str]) -> None:
+        # == PetService:AddPet + discover
+        self.pets[key] = self.pets.get(key, 0) + 1
+        self.pet_index.add(key)
+
+    def merge_pets(self) -> None:
+        # == PetService onMerge, repeated while any id+variant has MergeCount copies
+        need = int(self.P["MergeCount"])
+        changed = True
+        while changed:
+            changed = False
+            for key, n in list(self.pets.items()):
+                nxt = self.P["NextVariant"].get(key[1])
+                if nxt and n >= need:
+                    self.pets[key] = n - need
+                    if self.pets[key] == 0:
+                        del self.pets[key]
+                    self.add_pet((key[0], nxt))
+                    self.merges += 1
+                    changed = True
+
+    def egg_odds(self, egg: Dict[str, Any], luck: float) -> List[Tuple[str, float]]:
+        # == Odds.Egg: rarity weights, luck x (1 + luck) on every rarity above the lowest present one
+        entries = [(r["id"], egg["odds"].get(r["id"], 0)) for r in self.P["Rarities"]]
+        entries = [(rid, w) for rid, w in entries if w > 0 and self.by_rarity[rid]]
+        if luck > 0 and entries:
+            lowest = min(self.rarity[rid]["order"] for rid, _ in entries)
+            entries = [(rid, w * (1 + luck) if self.rarity[rid]["order"] > lowest else w) for rid, w in entries]
+        return entries
+
+    def hatch_roll(self, egg_id: str, luck: float) -> str:
+        entries = self.egg_odds(self.egg_by_id(egg_id), luck)
+        pick = self.rng.random() * sum(w for _, w in entries)
+        rid = entries[-1][0]
+        for r, w in entries:
+            pick -= w
+            if pick <= 0:
+                rid = r
+                break
+        return self.rng.choice(self.by_rarity[rid])
+
+    def egg_by_id(self, egg_id: str) -> Dict[str, Any]:
+        return next(e for e in self.EG["List"] if e["id"] == egg_id)
+
+    def egg_price(self, egg: Dict[str, Any]) -> float:
+        # == Pricing.Egg: milk/s (events and pets included) x the rebirth cash bonus only
+        rebirth_mult = 1 + self.E["Rebirth"]["CashMultiplierPerRebirth"] * self.rebirths
+        return math.floor(max(egg["minPrice"], self.mps() * rebirth_mult * egg["priceSeconds"]))
+
+    def free_nest(self) -> Optional[int]:
+        for i in range(1, self.nest_count() + 1):
+            if i not in self.nests:
+                return i
+        return None
+
+    def release_weakest(self) -> bool:
+        """--pet-release (NOT in the game yet): drop the weakest unequipped pet to make room."""
+        if not self.pet_release:
+            return False
+        free = {k: n - self.equipped.count(k) for k, n in self.pets.items() if n > self.equipped.count(k)}
+        if not free:
+            return False
+        key = min(free, key=lambda k: self.pet_boost(k)[1] * (1 if self.pet_boost(k)[0] in ("milk", "cash") else 0.5))
+        self.pets[key] -= 1
+        if self.pets[key] == 0:
+            del self.pets[key]
+        return True
+
+    def can_place(self) -> bool:
+        # == EggService placeBlocker
+        while self.pet_count() + len(self.nests) >= self.P["MaxInventory"]:
+            if not self.release_weakest():
+                return False
+        return self.free_nest() is not None
+
+    def place_egg(self, egg: Dict[str, Any]) -> None:
+        nest = self.free_nest()
+        assert nest is not None
+        self.nests[nest] = (egg["id"], self.t + egg["hatchSeconds"], self.pb["luck"])
+
+    def egg_tick(self) -> None:
+        """Free egg claim + egg shop (both UI, usable anywhere)."""
+        if self.t - self.last_free_egg >= self.EG["FreeEggSeconds"] and self.can_place():
+            self.last_free_egg = self.t
+            self.free_eggs += 1
+            self.place_egg(self.egg_by_id(self.EG["FreeEggId"]))
+        unlocked = [e for e in self.EG["List"] if self.rebirths >= e["rebirthsRequired"]]
+        unlocked.sort(key=lambda e: e["priceSeconds"], reverse=True)  # best egg first
+        while self.can_place():
+            for egg in unlocked:
+                price = self.egg_price(egg)
+                budget = self.cash_earned * self.egg_budget - self.egg_cash_spent
+                if price <= self.cash * self.egg_cash_fraction and price <= budget:
+                    self.cash -= price
+                    self.egg_cash_spent += price
+                    self.eggs_bought[egg["id"]] = self.eggs_bought.get(egg["id"], 0) + 1
+                    self.place_egg(egg)
+                    break
+            else:
+                return
+
+    def hatch_ready(self) -> None:
+        """At the plot: hatch every ready nest (ProximityPrompt), merge, re-equip."""
+        hatched = False
+        for nest, (egg_id, ready_at, luck) in sorted(self.nests.items()):
+            if self.t < ready_at:
+                continue
+            if self.pet_count() >= self.P["MaxInventory"]:
+                self.merge_pets()
+                if self.pet_count() >= self.P["MaxInventory"] and not self.release_weakest():
+                    break
+            luck = min(max(luck, 0.0), self.P["LuckCap"])
+            self.add_pet((self.hatch_roll(egg_id, luck), "normal"))
+            del self.nests[nest]
+            self.hatched += 1
+            hatched = True
+        if hatched:
+            self.merge_pets()
+            self.equip_best()
+        if self.inventory_stuck_at is None and self.pet_count() >= self.P["MaxInventory"]:
+            self.inventory_stuck_at = self.t  # full and nothing to merge: no pet can be released, eggs stop
 
     # ------------------------------------------------------------------ actions
     def merge_all(self) -> None:
@@ -342,6 +587,8 @@ class Sim:
         self.cash = float(self.E["StartingCash"])
         self.reset_run()
         self.rebirths += 1
+        if self.pets_on:  # pets, nests and pet index survive; more slots/nests may unlock
+            self.equip_best()
         self.rebirth_times.append(self.t)
         self.run_best_times.append({})
         self._mark_discovered()
@@ -398,8 +645,12 @@ class Sim:
         self.world_crates = 0
         self.open_crates()
         self.merge_all()
+        if self.pets_on:
+            self.hatch_ready()
         self.shop(at_plot=True)
         self.merge_all()
+        if self.pets_on:
+            self.egg_tick()
         self.last_plot_visit = self.t
 
     def fill_can(self) -> None:
@@ -419,6 +670,7 @@ class Sim:
 
     def collect(self) -> None:
         self.cash += self.dairy_cash
+        self.cash_earned += self.dairy_cash
         self.dairy_cash = 0.0
 
     # ------------------------------------------------------------------ world ticks
@@ -540,6 +792,8 @@ class Sim:
         self.player_tick()
         if self.t % DECIDE_EVERY == 0 and self.state != "plot":
             self.shop(at_plot=False)  # UI purchases: upgrades, crates, rebirth
+            if self.pets_on:
+                self.egg_tick()  # free egg + egg shop (after shopping, so a rebirth is never delayed by eggs)
         self.t += 1
 
     def trace_line(self) -> str:
@@ -548,10 +802,27 @@ class Sim:
             f"cash {fmt_num(self.cash):>7}  income {fmt_num(self.income()):>7}/s  "
             f"cows {sum(self.cows.values()):4d}  bought {self.cows_bought:3d}  "
             f"ups {','.join(str(self.up[k]) for k in self.U)}  crates bought {self.crates_bought}"
+            + (
+                f"  pets {self.pet_count()} milk +{self.pb['milk'] * 100:.0f}% cash +{self.pb['cash'] * 100:.0f}%"
+                f" index {len(self.pet_index)}"
+                if self.pets_on
+                else ""
+            )
         )
 
 
-def run(cfg, seeds: int, hours: float, double_cash: bool, events: bool, trace: int) -> Dict[str, Any]:
+def run(
+    cfg,
+    seeds: int,
+    hours: float,
+    double_cash: bool,
+    events: bool,
+    trace: int,
+    pets: bool = True,
+    egg_cash_fraction: float = EGG_CASH_FRACTION,
+    egg_budget: float = EGG_BUDGET_SHARE,
+    pet_release: bool = False,
+) -> Dict[str, Any]:
     total = int(hours * 3600)
     tier_count = len(cfg["Cows"]["tiers"])
     tiers: Dict[int, List[Optional[int]]] = {t: [] for t in range(1, tier_count + 1)}
@@ -559,7 +830,7 @@ def run(cfg, seeds: int, hours: float, double_cash: bool, events: bool, trace: i
     first_run_tiers: Dict[int, List[Optional[int]]] = {t: [] for t in range(1, tier_count + 1)}
     sims = []
     for seed in range(1, seeds + 1):
-        sim = Sim(cfg, seed, double_cash, events)
+        sim = Sim(cfg, seed, double_cash, events, pets, egg_cash_fraction, egg_budget, pet_release)
         for _ in range(total):
             sim.step()
             if trace and seed == 1 and sim.t % trace == 0:
@@ -604,6 +875,47 @@ def report(cfg, res) -> None:
     s = res["sims"][0]
     print(f"\nSeed 1 at the end: {s.trace_line()}")
     print(f"  cows bought (all runs) {s.cows_bought_total}, crates bought {s.crates_bought}, crates dropped {s.crates_dropped}")
+    if s.pets_on:
+        report_pets(res)
+
+
+def report_pets(res) -> None:
+    sims = res["sims"]
+    print("\nPets (all seeds)")
+    print(f"  {'milestone':<34} {'median':>9} {'fastest':>9} {'slowest':>9}  reached")
+    print(f"  {'pet milk bonus at cap':<34} {summarize([x.milk_cap_at for x in sims])}")
+    print(f"  {'pet cash bonus at cap':<34} {summarize([x.cash_cap_at for x in sims])}")
+    print(f"  {'inventory full, nothing to merge':<34} {summarize([x.inventory_stuck_at for x in sims])}")
+    s = sims[0]
+    eq = ", ".join(f"{k[0]}:{k[1]}" for k in s.equipped)
+    print(f"  seed 1: {s.free_eggs} free eggs, bought {s.eggs_bought or '{}'} for {fmt_num(s.egg_cash_spent)}, "
+          f"{s.hatched} hatched, {s.merges} merges, {s.pet_count()} pets, index {len(s.pet_index)}"
+          f" (milk x{s.index_milk:.2f})")
+    print(f"  seed 1 equipped: {eq}  ->  milk +{s.pb['milk'] * 100:.0f}%, cash +{s.pb['cash'] * 100:.0f}%,"
+          f" speed +{s.pb['speed'] * 100:.0f}%, luck +{s.pb['luck'] * 100:.0f}%")
+
+
+def median_of(values: List[Optional[int]]) -> Optional[float]:
+    got = sorted(v for v in values if v is not None)
+    return statistics.median(got) if got and len(got) * 2 > len(values) else None
+
+
+def milestone_rows(res) -> List[Tuple[str, Optional[float], str]]:
+    reb = res["rebirths"]
+    rows = [("Tier 5", median_of(res["tiers"][5]), "~5m"), ("Tier 10", median_of(res["tiers"][10]), "45-60m")]
+    for n in range(1, 6):
+        rows.append((f"Rebirth {n}", median_of(reb.get(n, [None] * len(res["sims"]))), "30-45m" if n == 1 else ""))
+    top = max(res["tiers"])
+    rows.append((f"Tier {top}", median_of(res["tiers"][top]), "multi-day (>= ~1d)"))
+    return rows
+
+
+def report_compare(before, after) -> None:
+    print(f"\nNo pets vs pets (median of {len(after['sims'])} seeds, {after['hours']:g} h of active play)")
+    print("| Milestone | Target | No pets | Pets |")
+    print("|---|---|---|---|")
+    for (name, a, target), (_, b, _) in zip(milestone_rows(before), milestone_rows(after)):
+        print(f"| {name} | {target} | {fmt_time(a)} | {fmt_time(b)} |")
 
 
 def main() -> None:
@@ -616,6 +928,14 @@ def main() -> None:
     ap.add_argument("--no-events", action="store_true", help="disable timed events (B2)")
     ap.add_argument("--trace", type=int, default=0, metavar="SECONDS", help="print seed 1 state every N s")
     ap.add_argument("--config", type=Path, default=CONFIG_DIR)
+    ap.add_argument("--no-pets", action="store_true", help="no eggs, no pets (the pre-F1 economy)")
+    ap.add_argument("--compare", action="store_true", help="run without and with pets, print a milestone table")
+    ap.add_argument("--egg-cash-fraction", type=float, default=EGG_CASH_FRACTION, metavar="F",
+                    help=f"buy an egg when it costs at most F x cash (default {EGG_CASH_FRACTION})")
+    ap.add_argument("--egg-budget", type=float, default=EGG_BUDGET_SHARE, metavar="F",
+                    help=f"egg spending cap as a share of all cash earned (default {EGG_BUDGET_SHARE}; 0 = free eggs only)")
+    ap.add_argument("--pet-release", action="store_true",
+                    help="what-if: the player can release its weakest pet when the inventory is full (not in the game)")
     args = ap.parse_args()
 
     cfg = load_all(args.config)
@@ -625,7 +945,14 @@ def main() -> None:
         apply_override(cfg, spec)
     if args.set:
         print("Overrides:", ", ".join(args.set))
-    res = run(cfg, args.seeds, args.hours, args.double_cash, not args.no_events, args.trace)
+    common = (cfg, args.seeds, args.hours, args.double_cash, not args.no_events)
+    if args.compare:
+        before = run(*common, 0, False)
+        after = run(*common, args.trace, True, args.egg_cash_fraction, args.egg_budget, args.pet_release)
+        report(cfg, after)
+        report_compare(before, after)
+        return
+    res = run(*common, args.trace, not args.no_pets, args.egg_cash_fraction, args.egg_budget, args.pet_release)
     report(cfg, res)
 
 

@@ -278,8 +278,19 @@ def load_all(config_dir: Path) -> Dict[str, Any]:
     upgrades = read_module(config_dir / "Upgrades.luau", "Upgrades")["Upgrades"]
     events = read_module(config_dir / "Events.luau", "Events")["Events"]
     cows = read_cows(config_dir / "Cows.luau")
+    pets = read_module(config_dir / "Pets.luau", "Pets")["Pets"]
+    eggs = read_module(config_dir / "Eggs.luau", "Eggs")["Eggs"]
+    index_rewards = read_module(config_dir / "IndexRewards.luau", "IndexRewards")["IndexRewards"]
     up_by_id = {u["id"]: u for u in upgrades["List"]}
-    return {"Economy": economy, "Upgrades": up_by_id, "Events": events, "Cows": cows}
+    return {
+        "Economy": economy,
+        "Upgrades": up_by_id,
+        "Events": events,
+        "Cows": cows,
+        "Pets": pets,
+        "Eggs": eggs,
+        "IndexRewards": index_rewards,
+    }
 
 
 if __name__ == "__main__":

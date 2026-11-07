@@ -4,6 +4,33 @@ Generated with `python3 tools/balance_sim.py --hours 168 --seeds 6` on 2026-11-0
 Times are **active play time** of a "reasonable" free player (no Robux, no friends, no offline time, timed events on).
 Re-run after any change to `src/shared/Config/*.luau`: the sim parses those files directly.
 
+## Pets and eggs (P1, 2026-11-07)
+
+The sim now models F1/F2 pets: free egg every `Eggs.FreeEggSeconds`, the Egg Shop (`Pricing.Egg`), nests, hatch odds with luck (`Odds.Egg`), equip slots, the 5 -> 1 variant merge, `Multipliers.PetBonus` with its caps, `PetIndexMilk`, and pets surviving rebirth. It also applies the E1 Index cash bonus (`IndexRewards.CashMultiplier`) in both modes, so the "no pets" column is a little faster than the B4 report further down.
+
+Simulated egg player: claims every free egg, hatches on every plot visit, buys the best unlocked egg when it costs at most 25% of cash **and** fits a budget of 15% of all cash earned (`--egg-cash-fraction`, `--egg-budget`). Without the budget, nests free up every 60 s and the cash rule alone parks cash at 4x the egg price, so rebirths stall. Equips the milk/cash split that maximizes `(1 + milk) x (1 + cash)`.
+
+`python3 tools/balance_sim.py --compare --hours 168 --seeds 6` (medians, current config, no config changes needed):
+
+| Milestone | Target | No pets | Pets | Heavy egg buyer (50%/50%) | Pets + release what-if | Heavy + release |
+|---|---|---|---|---|---|---|
+| Tier 5 | ~5m | 4m01s | 3m08s | 3m08s | 3m08s | 3m08s |
+| Tier 10 | 45-60m | 55m07s | 59m02s | 56m48s | 59m02s | 56m48s |
+| Rebirth 1 | 30-45m | 33m17s | 35m00s | 40m22s | 35m00s | 40m22s |
+| Rebirth 2 | | 1h17m | 1h12m | 1h17m | 1h12m | 1h17m |
+| Rebirth 3 | | 1h57m | 1h50m | 2h07m | 1h50m | 2h07m |
+| Rebirth 4 | | 2h57m | 2h45m | 3h22m | 2h45m | 3h22m |
+| Rebirth 5 | | 4h02m | 3h53m | 4h49m | 3h53m | 4h49m |
+| Tier 18 | multi-day | 1d21h | 1d22h | 1d21h | 1d18h | 2d03h |
+| Pet milk / cash cap reached | | | never | never | 1d23h / 2d05h | 23h / 22h |
+| Inventory full, nothing to merge | | | **15h24m** | **7h02m** | never | never |
+
+Findings:
+
+1. **Pets don't break pacing.** Even when both caps are reached (x16 income), tier 18 stays at 1d18h or slower and the first rebirth at 35 min or slower. Two things absorb the pet bonus. Crate prices scale with `milk/s x Multipliers.Cash`, so pet milk and cash bonuses raise them too. And tier 1 cow prices grow geometrically (`1.032 ^ bought`), so x16 income only buys about 88 more cows per run. Heavy egg buying is even slower early on, because the egg spending costs more than the early pets give back.
+2. **Inventory deadlock (bug, needs code, owner F1).** There is no way to release a pet. Rainbow pets can't merge, and up to 4 normal + 4 golden copies of each of the 15 pets can sit unmerged, so every seed fills `Pets.MaxInventory = 50` with nothing left to merge (median 15 h, 7 h for a heavy buyer). After that, `placeBlocker` refuses **every** egg, the free egg too, and the pet index stops growing (23 of 45 for seed 1). Raising `MaxInventory` only delays this. Fix: a `RequestReleasePet(uid)` remote (or "release all unequipped Normals of a rarity"). `--pet-release` simulates it: pacing still holds (1d18h).
+3. **Dairy and Cosmic eggs are almost never bought.** `Dairy` (600 s of income) and `Cosmic` (1800 s) cost 5x and 15x a `Pasture` egg, but give the same legendary chance per cash and per nest second (Pasture 0.2% / 120 s vs Dairy 1% / 600 s), and Pasture hatches 5x faster. Optional, not applied (pacing is fine either way): `Eggs.List.2.priceSeconds = 400` and `Eggs.List.3.priceSeconds = 900`, so the better eggs are worth saving for. With those prices the simulated player still buys only Pasture eggs (its cash rule rarely allows 4x a Dairy price), so the table doesn't change at all (tier 18 1d22h, rebirth 1 35m00s). This is a design call, not a pacing fix. Test with `--set Eggs.List.2.priceSeconds=400 --set Eggs.List.3.priceSeconds=900`.
+
 ## Targets vs. results
 
 | Milestone | Target | Current config | Proposed tuning |
