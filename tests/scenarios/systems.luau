@@ -130,6 +130,149 @@ end
 H:advance(15) -- AutoMerge / AutoSell ticks
 T.eq("monetization raises no errors", errorCount(), before)
 
+---------------------------------------------------------------- crate compliance (G0, issue #50)
+T.section("crate compliance")
+before = errorCount()
+local Odds = H:sharedModule("Odds")
+local Economy = H:sharedModule("Config.Economy")
+local Cows = H:sharedModule("Config.Cows")
+local worst = 0
+for tier = 1, Cows.Count do
+	for _, shift in { 0, 1 } do
+		local sum = 0
+		for _, o in Odds.Crate(tier, shift) do
+			sum += o.chance
+		end
+		worst = math.max(worst, math.abs(sum - 1))
+	end
+end
+T.check(`Odds.Crate sums to 1 for tiers 1..{Cows.Count}, shifts 0..1`, worst <= 1e-9, `worst error {worst}`)
+local premiumSum = 0
+for _, o in Odds.Crate(5, Economy.Crate.PremiumOddsShift) do
+	premiumSum += o.chance
+end
+T.check("premium odds sum to 1", math.abs(premiumSum - 1) <= 1e-9, tostring(premiumSum))
+
+local Compliance = H:serverModule("Services.ComplianceService")
+T.check("mock policy: Alice is unrestricted", H:run(function()
+	return Compliance:IsPaidRandomRestricted(alice)
+end) == false)
+
+-- restricted: buying is refused, opening owned crates still works
+H:run(function()
+	DataService:AddCash(alice, 1e9)
+end)
+alice:SetAttribute("PaidRandomRestricted", true)
+H:advance(0.5)
+local cratesBefore = dataOf(alice).crates
+local cashBefore = dataOf(alice).cash
+H:clearReceived(alice)
+H:fireServer(alice, "RequestBuyCrate")
+H:step()
+T.eq("restricted player can't buy a crate", dataOf(alice).crates, cratesBefore)
+T.eq("restricted player is not charged", dataOf(alice).cash, cashBefore)
+T.check("restricted player is told why", #H:received(alice, "Notify") > 0)
+local cratesPanel = alice.PlayerGui:FindFirstChild("Crates", true)
+local buyBtn = cratesPanel and cratesPanel:FindFirstChild("Buy", true)
+local caption = buyBtn and buyBtn:FindFirstChild("Caption")
+T.check("restricted: Buy button is disabled", buyBtn ~= nil and buyBtn:GetAttribute("Enabled") == false)
+T.check(
+	"restricted: Buy button points to free crates",
+	caption ~= nil and string.find(caption.Text, "Not available in your region", 1, true) ~= nil,
+	caption and caption.Text or "no caption"
+)
+local shopPanel = alice.PlayerGui:FindFirstChild("Shop", true)
+local premiumRow = nil
+if shopPanel then
+	for _, x in shopPanel:GetDescendants() do
+		if x.Name == "Odds" and x:IsA("GuiButton") then
+			premiumRow = x.Parent
+		end
+	end
+end
+T.check("Shop has an Odds button on the Premium Crate", premiumRow ~= nil)
+T.check("restricted: Premium Crate is hidden", premiumRow ~= nil and premiumRow.Visible == false)
+H:run(function()
+	DataService:Get(alice).crates += 1
+	DataService:Replicate(alice, "crates")
+end)
+H:advance(0.5)
+H:clearReceived(alice)
+cratesBefore = dataOf(alice).crates
+H:fireServer(alice, "RequestOpenCrate")
+H:step()
+T.eq("restricted player can still open an owned crate", dataOf(alice).crates, cratesBefore - 1)
+T.check("CrateOpened fired for the owned crate", #H:received(alice, "CrateOpened") == 1)
+
+-- restricted Premium Crate receipt (stale client): granted as cash, never dropped, no roll
+H:clearReceived(alice)
+cashBefore = dataOf(alice).cash
+cratesBefore = dataOf(alice).crates
+local decision = H:run(function()
+	return Monetization:DebugGrantProduct(alice, "PremiumCrate")
+end)
+H:step()
+T.eq("restricted PremiumCrate receipt is granted", decision, "PurchaseGranted")
+T.check("restricted PremiumCrate becomes cash", dataOf(alice).cash > cashBefore)
+T.check("restricted PremiumCrate gives no random roll", #H:received(alice, "CrateOpened") == 0)
+T.eq("restricted PremiumCrate stores no crate", dataOf(alice).crates, cratesBefore)
+
+-- unrestricted again: buying works, UI is back
+alice:SetAttribute("PaidRandomRestricted", false)
+H:advance(0.5)
+cratesBefore = dataOf(alice).crates
+H:fireServer(alice, "RequestBuyCrate")
+H:step()
+T.eq("unrestricted player can buy a crate", dataOf(alice).crates, cratesBefore + 1)
+H:advance(0.5)
+T.check("unrestricted: Premium Crate is shown", premiumRow ~= nil and premiumRow.Visible == true)
+T.check(
+	"unrestricted: Buy button shows the price",
+	caption ~= nil and string.find(caption.Text, "BUY", 1, true) == 1,
+	caption and caption.Text or "no caption"
+)
+
+-- odds list: opened from the Crates panel and from the Shop, rows sum to 100%
+local oddsView = cratesPanel and cratesPanel:FindFirstChild("OddsView", true)
+local oddsBtn = cratesPanel and cratesPanel:FindFirstChild("OddsButton", true)
+T.check("Crates panel has an Odds button and list", oddsView ~= nil and oddsBtn ~= nil)
+if oddsView and oddsBtn then
+	local function shownTotal(): (number, number)
+		local total, rows = 0, 0
+		for _, x in oddsView:GetDescendants() do
+			if x.Name == "Percent" and x:IsA("TextLabel") then
+				total += tonumber((string.gsub(x.Text, "%%", ""))) or 0
+				rows += 1
+			end
+		end
+		return total, rows
+	end
+	H:run(function()
+		H:clientModule(alice, "UI.CratesPanel").ShowOdds(false)
+	end, Services.state.clients[alice])
+	H:advance(0.5)
+	local total, rows = shownTotal()
+	T.check("crate odds list is visible", oddsView.Visible == true)
+	local best = 1
+	for key, n in dataOf(alice).cows do
+		if n > 0 and tonumber(key) > best then
+			best = tonumber(key)
+		end
+	end
+	local expected = #Odds.Crate(best, 0)
+	T.check("crate odds list shows every outcome", rows == expected, `{rows} rows, expected {expected}`)
+	T.check("crate odds list sums to 100%", math.abs(total - 100) < 0.05, tostring(total))
+	H:click(alice, premiumRow:FindFirstChild("Odds"))
+	H:advance(0.5)
+	total, rows = shownTotal()
+	T.check("premium odds open from the Shop", oddsView.Visible == true and rows > 0, `{rows} rows`)
+	T.check("premium odds list sums to 100%", math.abs(total - 100) < 0.05, tostring(total))
+end
+T.eq("crate compliance raises no errors", errorCount(), before)
+if errorCount() > before then
+	print("  " .. newErrorsSince(before))
+end
+
 ---------------------------------------------------------------- quests
 T.section("quests")
 local bData = dataOf(bob)
