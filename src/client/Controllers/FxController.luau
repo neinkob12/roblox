@@ -22,7 +22,7 @@ local Net = require(ReplicatedStorage.Shared.Net)
 local Fx = require(ReplicatedStorage.Shared.Fx)
 local Format = require(ReplicatedStorage.Shared.Format)
 local CowModels = require(ReplicatedStorage.Shared.CowModels)
-local Theme = require(script.Parent.Parent.UI.Theme)
+local Theme = require(script.Parent.Parent.Lib.Theme)
 local DataController = require(script.Parent.DataController)
 local Safe = require(ReplicatedStorage.Shared.Safe)
 
