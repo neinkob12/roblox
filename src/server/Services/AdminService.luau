@@ -184,6 +184,8 @@ register("reset", "/reset  (wipe your data)", function(player, _args)
 	if not data then
 		return
 	end
+	-- receipt ids must survive a reset, or a pending Robux retry could be granted twice
+	local purchases = data.purchases
 	-- the profile table must stay the same table (services hold references), so wipe it in place
 	for key in table.clone(data) do
 		data[key] = nil
@@ -191,6 +193,8 @@ register("reset", "/reset  (wipe your data)", function(player, _args)
 	for key, value in DataService.Template do
 		data[key] = deepCopy(value)
 	end
+	data.cows = DataService:NewStartingCows()
+	data.purchases = purchases or {}
 	data.firstJoin = os.time()
 	data.lastOnline = os.time()
 	replicateAll(player, data)
