@@ -6,7 +6,7 @@
 --   deposit milk splash + ring at DepositPad
 --   merge   flash, sparkles and a pop-scale on the merged stall's cow + "MERGED!"
 --   buy     tier-1 cows drop into Stall1 with a bounce + "+N cows"
---   rare    golden / diamond screen-edge glow + light camera shake (skipped with reduced motion)
+--   rare    golden / diamond screen-edge glow + light camera shake (both skipped with reduceMotion)
 --   crate   beam of light where the crate was picked up
 --   pads    pads squish when the local player steps on them, labels pulse when ready
 --
@@ -495,14 +495,16 @@ local function onMerge(payload: any)
 		return
 	end
 	local p = pos :: Vector3
-	flash(
-		CFrame.new(p + Vector3.new(0, 2, 0)),
-		Enum.PartType.Ball,
-		Color3.new(1, 1, 1),
-		Vector3.one,
-		Vector3.one * 11,
-		0.35
-	)
+	if not reducedMotion() then
+		flash(
+			CFrame.new(p + Vector3.new(0, 2, 0)),
+			Enum.PartType.Ball,
+			Color3.new(1, 1, 1),
+			Vector3.one,
+			Vector3.one * 11,
+			0.35
+		)
+	end
 	emitAt(sparkle, p + Vector3.new(0, 2, 0), 40, Fx.Text.MergeColor)
 	local text = if count > 1 then `MERGED! x{count}` else "MERGED!"
 	floatText(p + Vector3.new(0, 6, 0), text, Fx.Text.MergeColor, true)
@@ -685,7 +687,9 @@ local function onRare(payload: any)
 	if not begin(Fx.Rare.GlowTime) then
 		return
 	end
-	glow(style.color, Fx.Rare.GlowTime)
+	if not reducedMotion() then
+		glow(style.color, Fx.Rare.GlowTime)
+	end
 	shake(style.shake, Fx.Rare.ShakeTime)
 	local tank = getPlot()
 	local tankModel = tank and tank:FindFirstChild("Tank")
