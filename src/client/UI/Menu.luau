@@ -16,6 +16,7 @@ local BUTTONS = {
 	{ panel = "Quests", icon = "📜", label = "Quests", color = Colors.Blue },
 	{ panel = "Shop", icon = "🛒", label = "Shop", color = Colors.Purple },
 	{ panel = "Index", icon = "📖", label = "Index", color = Colors.Orange },
+	{ panel = "Pets", icon = "🐾", label = "Pets", color = Colors.Pink }, -- F2
 	{ panel = "Settings", icon = "⚙️", label = "Settings", color = Colors.Grey },
 }
 
