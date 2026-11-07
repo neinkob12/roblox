@@ -18,9 +18,9 @@
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Net = require(ReplicatedStorage.Shared.Net)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Events = require(ReplicatedStorage.Shared.Config.Events)
+local Notify = require(script.Parent.Parent.Util.Notify)
 
 local EventService = {}
 
@@ -60,11 +60,11 @@ local function runOne()
 	workspace:SetAttribute("EventNextAt", 0)
 	workspace:SetAttribute("EventEndsAt", os.time() + seconds)
 	workspace:SetAttribute("EventId", ev.id)
-	Net.Event("Notify"):FireAllClients(`EVENT: {ev.name} ({Format.Time(seconds)})`, "rare")
+	Notify.All(`EVENT: {ev.name} ({Format.Time(seconds)})`, "rare")
 	task.wait(seconds)
 	workspace:SetAttribute("EventId", "")
 	workspace:SetAttribute("EventEndsAt", 0)
-	Net.Event("Notify"):FireAllClients(`{ev.name} is over! Next event in {Format.Time(GAP)}`, "info")
+	Notify.All(`{ev.name} is over! Next event in {Format.Time(GAP)}`, "info")
 end
 
 function EventService:Init()

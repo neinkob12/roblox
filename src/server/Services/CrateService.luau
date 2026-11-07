@@ -26,6 +26,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
 local HerdUtil = require(script.Parent.HerdUtil)
 local Pricing = require(ReplicatedStorage.Shared.Pricing)
+local Notify = require(script.Parent.Parent.Util.Notify)
 
 local CrateConfig = Economy.Crate
 local CRATE_COLOR = Color3.fromRGB(255, 200, 60)
@@ -90,7 +91,7 @@ local function onOpen(player: Player)
 		return
 	end
 	if data.crates <= 0 then
-		HerdUtil.Notify(player, "You have no crates!", "error")
+		Notify.To(player, "You have no crates!", "error")
 		return
 	end
 	data.crates -= 1
@@ -107,14 +108,14 @@ local function onBuy(player: Player)
 	end
 	local price = CrateService:BuyPrice(player)
 	if not DataService:SpendCash(player, price) then
-		HerdUtil.Notify(player, `Not enough cash! Crate costs {Format.Cash(price)}`, "error")
+		Notify.To(player, `Not enough cash! Crate costs {Format.Cash(price)}`, "error")
 		return
 	end
 	local data = DataService:Get(player)
 	data.cratesBought = (data.cratesBought or 0) + 1
 	DataService:Replicate(player, "cratesBought")
 	CrateService:GiveCrate(player, false)
-	HerdUtil.Notify(player, "Bought a Mystery Milk Crate!", "success")
+	Notify.To(player, "Bought a Mystery Milk Crate!", "success")
 end
 
 -- World drops ------------------------------------------------------------------------
@@ -213,10 +214,10 @@ local function spawnCrate(player: Player): boolean
 		spin:Cancel()
 		data.crates += 1
 		DataService:Replicate(player, "crates")
-		HerdUtil.Notify(player, "Picked up a Mystery Milk Crate!", "rare")
+		Notify.To(player, "Picked up a Mystery Milk Crate!", "rare")
 		removeCrate(player, crate)
 	end)
-	HerdUtil.Notify(player, "A Mystery Milk Crate dropped on your farm!", "rare")
+	Notify.To(player, "A Mystery Milk Crate dropped on your farm!", "rare")
 	return true
 end
 

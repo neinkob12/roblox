@@ -21,6 +21,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Codes = require(ReplicatedStorage.Shared.Config.Codes)
 local DataService = require(script.Parent.DataService)
 local HerdUtil = require(script.Parent.HerdUtil)
+local Notify = require(script.Parent.Parent.Util.Notify)
 
 local CodesService = {}
 
@@ -117,7 +118,7 @@ local function redeem(player: Player, raw: any): (boolean, string)
 	end
 	data.redeemedCodes[code] = true
 	DataService:Replicate(player, "redeemedCodes")
-	HerdUtil.Notify(player, `Code redeemed: {text}`, "success")
+	Notify.To(player, `Code redeemed: {text}`, "success")
 	return true, text
 end
 

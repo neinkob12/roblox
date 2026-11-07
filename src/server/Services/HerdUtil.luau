@@ -4,7 +4,6 @@
 --   HerdUtil.GiveCow(player, tier, n)          add n cows of a tier (marks discovered, fires CowDiscovered)
 --   HerdUtil.AddCowsRaw(player, data, tier, n) same but does NOT replicate "cows" (for batch changes)
 --   HerdUtil.BestTier(data) -> number           highest tier with count > 0 (1 if none)
---   HerdUtil.Notify(player, text, kind)
 --   HerdUtil.GetPlot(player) -> Model?          workspace.Plots["Plot"..PlotId]
 --   HerdUtil.OwnsPlot(player, plot) -> boolean
 --   HerdUtil.PlayerFromHit(hit) -> Player?
@@ -29,10 +28,6 @@ local debounces: { [Player]: { [string]: number } } = {}
 Players.PlayerRemoving:Connect(function(player)
 	debounces[player] = nil
 end)
-
-function HerdUtil.Notify(player: Player, text: string, kind: string?)
-	Net.Event("Notify"):FireClient(player, text, kind or "info")
-end
 
 function HerdUtil.Debounce(player: Player, key: string, seconds: number): boolean
 	local t = debounces[player]

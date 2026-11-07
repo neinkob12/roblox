@@ -15,6 +15,7 @@ local DataService = require(script.Parent.DataService)
 local HerdUtil = require(script.Parent.HerdUtil)
 local Pricing = require(ReplicatedStorage.Shared.Pricing)
 local WalkSpeedService = require(script.Parent.WalkSpeedService)
+local Notify = require(script.Parent.Parent.Util.Notify)
 
 local RebirthService = {}
 
@@ -32,7 +33,7 @@ local function onRequest(player: Player)
 	end
 	local cost = RebirthService:Cost(data.rebirths)
 	if data.cash < cost then
-		HerdUtil.Notify(player, `Rebirth needs {Format.Cash(cost)}`, "error")
+		Notify.To(player, `Rebirth needs {Format.Cash(cost)}`, "error")
 		return
 	end
 
@@ -76,7 +77,7 @@ local function onRequest(player: Player)
 	WalkSpeedService:Apply(player)
 
 	local mult = 1 + Economy.Rebirth.CashMultiplierPerRebirth * data.rebirths
-	HerdUtil.Notify(player, `REBIRTH {data.rebirths}! Cash x{Format.Number(mult)} forever`, "rare")
+	Notify.To(player, `REBIRTH {data.rebirths}! Cash x{Format.Number(mult)} forever`, "rare")
 end
 
 function RebirthService:Start()

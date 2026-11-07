@@ -11,7 +11,6 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Safe = require(ReplicatedStorage.Shared.Safe)
-local Net = require(ReplicatedStorage.Shared.Net)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
@@ -19,6 +18,7 @@ local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
 local DataService = require(script.Parent.DataService)
 local PlotService = require(script.Parent.PlotService)
 local ProductionService = require(script.Parent.ProductionService)
+local Notify = require(script.Parent.Parent.Util.Notify)
 
 local CanService = {}
 
@@ -69,13 +69,12 @@ local function onTapTouched(plot: Model, hit: BasePart)
 		return
 	end
 	local moved = CanService:FillCan(player)
-	local notify = Net.Event("Notify")
 	if moved > 0 then
-		notify:FireClient(player, `+{Format.Number(moved)} milk in your can`, "success")
+		Notify.To(player, `+{Format.Number(moved)} milk in your can`, "success")
 	elseif (data.tankMilk or 0) <= 0 then
-		notify:FireClient(player, "Your tank is empty, wait for the cows!", "info")
+		Notify.To(player, "Your tank is empty, wait for the cows!", "info")
 	else
-		notify:FireClient(player, "Your can is full! Sell it at the Dairy", "info")
+		Notify.To(player, "Your can is full! Sell it at the Dairy", "info")
 	end
 end
 

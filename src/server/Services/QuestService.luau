@@ -50,6 +50,7 @@ local Quests = require(ReplicatedStorage.Shared.Config.Quests)
 local DataService = require(script.Parent.DataService)
 local HerdUtil = require(script.Parent.HerdUtil)
 local CodesService = require(script.Parent.CodesService)
+local Notify = require(script.Parent.Parent.Util.Notify)
 
 local QuestService = {}
 
@@ -202,7 +203,7 @@ local function track(player: Player)
 					q.progress = math.min(q.target, q.progress + delta)
 					changed = true
 					if q.progress >= q.target then
-						HerdUtil.Notify(player, `Quest complete: {q.text}! Claim your reward`, "success")
+						Notify.To(player, `Quest complete: {q.text}! Claim your reward`, "success")
 					end
 				end
 			end
@@ -236,7 +237,7 @@ local function claim(player: Player, questId: any)
 	end
 	local q = data.quests.active[index]
 	if q.progress < q.target then
-		HerdUtil.Notify(player, "That quest isn't finished yet!", "error")
+		Notify.To(player, "That quest isn't finished yet!", "error")
 		return
 	end
 	-- replace first, then grant: a second claim with the same id can never pay twice
@@ -250,7 +251,7 @@ local function claim(player: Player, questId: any)
 		end
 	end
 	DataService:Replicate(player, "quests")
-	HerdUtil.Notify(player, `Quest reward: {text or q.rewardText}`, "success")
+	Notify.To(player, `Quest reward: {text or q.rewardText}`, "success")
 end
 
 function QuestService:Start()

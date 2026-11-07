@@ -20,19 +20,15 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
 
-local Net = require(ReplicatedStorage.Shared.Net)
 local Products = require(ReplicatedStorage.Shared.Config.Products)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
 local DataService = require(script.Parent.DataService)
+local Notify = require(script.Parent.Parent.Util.Notify)
 
 local SAVE_WAIT_TIMEOUT = 60 -- seconds to wait for the save before telling Roblox to retry later
 
 local MonetizationService = {}
-
-local function notify(player: Player, text: string, kind: string)
-	Net.Event("Notify"):FireClient(player, text, kind)
-end
 
 -- Gamepasses ------------------------------------------------------------------------------
 
@@ -87,7 +83,7 @@ local function onPassPurchaseFinished(player: Player, passId: number, wasPurchas
 		return
 	end
 	setPass(player, key, true)
-	notify(player, `Thanks! {Products.Passes[key].name} is now active!`, "success")
+	Notify.To(player, `Thanks! {Products.Passes[key].name} is now active!`, "success")
 end
 
 function MonetizationService:OwnsPass(player: Player, passKey: string): boolean
@@ -103,7 +99,7 @@ local function grantCash(player: Player, data: any, key: string)
 	local amount =
 		Products.CashPackAmount(Multipliers.MilkPerSecond(player, data), Multipliers.Cash(player, data), entry)
 	DataService:AddCash(player, amount)
-	notify(player, `+{Format.Cash(amount)} from {entry.name}!`, "success")
+	Notify.To(player, `+{Format.Cash(amount)} from {entry.name}!`, "success")
 end
 
 local GRANTS: { [string]: (Player, any) -> () } = {
@@ -128,7 +124,7 @@ local GRANTS: { [string]: (Player, any) -> () } = {
 		else
 			data.crates = (data.crates or 0) + 1
 			DataService:Replicate(player, "crates")
-			notify(player, "You got a Premium Milk Crate!", "success")
+			Notify.To(player, "You got a Premium Milk Crate!", "success")
 		end
 	end,
 	Boost3x = function(player, data)
@@ -147,7 +143,7 @@ local GRANTS: { [string]: (Player, any) -> () } = {
 		}
 		DataService:Replicate(player, "boosts")
 		local minutes = math.floor(((base + (entry.boostSeconds or 0)) - now) / 60 + 0.5)
-		notify(player, `3x Cash active for {minutes} min!`, "success")
+		Notify.To(player, `3x Cash active for {minutes} min!`, "success")
 	end,
 }
 

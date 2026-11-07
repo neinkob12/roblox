@@ -15,8 +15,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Signal = require(ReplicatedStorage.Shared.Signal)
-local Net = require(ReplicatedStorage.Shared.Net)
 local DataService = require(script.Parent.DataService)
+local Notify = require(script.Parent.Parent.Util.Notify)
 
 local PlotService = {}
 PlotService.PlotAssigned = Signal.new()
@@ -123,7 +123,7 @@ local function assign(player: Player)
 		end
 	end
 	warn(`[PlotService] no free plot for {player.Name}`)
-	Net.Event("Notify"):FireClient(player, "No free farm plot on this server!", "error")
+	Notify.To(player, "No free farm plot on this server!", "error")
 end
 
 local function release(player: Player)

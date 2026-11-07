@@ -14,6 +14,7 @@ local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Cows = require(ReplicatedStorage.Shared.Config.Cows)
 local DataService = require(script.Parent.DataService)
 local HerdUtil = require(script.Parent.HerdUtil)
+local Notify = require(script.Parent.Parent.Util.Notify)
 
 local MergeService = {}
 
@@ -56,7 +57,7 @@ function MergeService:MergeAll(player: Player, silent: boolean?): number
 	end
 	if total == 0 then
 		if not silent then
-			HerdUtil.Notify(player, `Need {cost} cows of the same tier to merge`, "error")
+			Notify.To(player, `Need {cost} cows of the same tier to merge`, "error")
 		end
 		return 0
 	end
@@ -68,7 +69,7 @@ function MergeService:MergeAll(player: Player, silent: boolean?): number
 	end
 	local best = Cows.Get(highestNew)
 	local bestName = if best then best.name else "?"
-	HerdUtil.Notify(player, `MERGED! x{total} (up to {bestName})`, "success")
+	Notify.To(player, `MERGED! x{total} (up to {bestName})`, "success")
 	return total
 end
 

@@ -17,13 +17,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local Safe = require(ReplicatedStorage.Shared.Safe)
-local Net = require(ReplicatedStorage.Shared.Net)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
 local DataService = require(script.Parent.DataService)
 local PlotService = require(script.Parent.PlotService)
+local Notify = require(script.Parent.Parent.Util.Notify)
 
 local DairyService = {}
 
@@ -113,10 +113,9 @@ local function onDepositTouched(hit: BasePart)
 	local price = Multipliers.MilkPrice()
 	local milk = DairyService:Deposit(player)
 	if milk > 0 then
-		Net.Event("Notify")
-			:FireClient(player, `Sold {Format.Number(milk)} milk at {string.format("%.2f", price)}x!`, "success")
+		Notify.To(player, `Sold {Format.Number(milk)} milk at {string.format("%.2f", price)}x!`, "success")
 	else
-		Net.Event("Notify"):FireClient(player, "Your can is empty! Fill it at your tank tap", "info")
+		Notify.To(player, "Your can is empty! Fill it at your tank tap", "info")
 	end
 end
 
@@ -132,14 +131,14 @@ local function onCashTouched(hit: BasePart)
 	local cash = data.dairyCash or 0
 	if cash <= 0 then
 		if (data.dairyQueue or 0) > 0 then
-			Net.Event("Notify"):FireClient(player, "Still selling, come back in a moment!", "info")
+			Notify.To(player, "Still selling, come back in a moment!", "info")
 		end
 		return
 	end
 	data.dairyCash = 0
 	DataService:Replicate(player, "dairyCash")
 	DataService:AddCash(player, cash)
-	Net.Event("Notify"):FireClient(player, `+{Format.Cash(cash)}`, "success")
+	Notify.To(player, `+{Format.Cash(cash)}`, "success")
 end
 
 ----------------------------------------------------------------------------- price board
@@ -346,7 +345,7 @@ local function truckTick()
 			workspace:SetAttribute("TruckActive", false)
 			workspace:SetAttribute("TruckNextAt", now + Economy.Truck.EverySeconds)
 			truckLeave()
-			Net.Event("Notify"):FireAllClients("The milk truck left. See you next time!", "info")
+			Notify.All("The milk truck left. See you next time!", "info")
 		end
 	else
 		local nextAt = workspace:GetAttribute("TruckNextAt")
@@ -356,7 +355,7 @@ local function truckTick()
 			workspace:SetAttribute("TruckActive", true)
 			workspace:SetAttribute("TruckLeavesAt", now + Economy.Truck.StaysSeconds)
 			truckArrive()
-			Net.Event("Notify"):FireAllClients(
+			Notify.All(
 				`The MILK TRUCK is here! x{Economy.Truck.PriceBonus} milk price for {Economy.Truck.StaysSeconds}s`,
 				"rare"
 			)

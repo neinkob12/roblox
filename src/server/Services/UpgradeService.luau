@@ -11,6 +11,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
 local HerdUtil = require(script.Parent.HerdUtil)
 local WalkSpeedService = require(script.Parent.WalkSpeedService)
+local Notify = require(script.Parent.Parent.Util.Notify)
 
 local UpgradeService = {}
 
@@ -31,17 +32,17 @@ local function onRequest(player: Player, id: unknown)
 	end
 	local level = data.upgrades[id] or 0
 	if level >= upgrade.maxLevel then
-		HerdUtil.Notify(player, `{upgrade.name} is already maxed!`, "error")
+		Notify.To(player, `{upgrade.name} is already maxed!`, "error")
 		return
 	end
 	local cost = Upgrades.Cost(id, level)
 	if not DataService:SpendCash(player, cost) then
-		HerdUtil.Notify(player, `Not enough cash! Need {Format.Cash(cost)}`, "error")
+		Notify.To(player, `Not enough cash! Need {Format.Cash(cost)}`, "error")
 		return
 	end
 	data.upgrades[id] = level + 1
 	DataService:Replicate(player, "upgrades")
-	HerdUtil.Notify(player, `{upgrade.name} upgraded to level {level + 1}!`, "success")
+	Notify.To(player, `{upgrade.name} upgraded to level {level + 1}!`, "success")
 	if id == "walkSpeed" then
 		WalkSpeedService:Apply(player)
 	end

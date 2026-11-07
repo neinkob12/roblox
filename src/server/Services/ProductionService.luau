@@ -19,6 +19,7 @@ local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
 local Events = require(ReplicatedStorage.Shared.Config.Events)
 local DataService = require(script.Parent.DataService)
+local Notify = require(script.Parent.Parent.Util.Notify)
 
 local ProductionService = {}
 
@@ -94,8 +95,7 @@ local function tickPlayer(player: Player, dt: number)
 	end
 	if rare then
 		local gained = newValue - current
-		Net.Event("Notify")
-			:FireClient(player, `{rare.name}! x{rare.multiplier} (+{Format.Number(gained)} milk)`, "rare")
+		Notify.To(player, `{rare.name}! x{rare.multiplier} (+{Format.Number(gained)} milk)`, "rare")
 	end
 end
 
