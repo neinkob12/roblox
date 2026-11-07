@@ -64,6 +64,19 @@ local function rewardText(q: any): string
 		if typeof(r.text) == "string" then
 			return r.text
 		end
+		-- B2 QuestService shape: { kind = "cash" | "crates" | "boost", amount, boostKind, mult, seconds }
+		if typeof(r.kind) == "string" then
+			if r.kind == "cash" and num(r.amount) then
+				return Format.Cash(r.amount)
+			elseif r.kind == "crates" and num(r.amount) then
+				return `{r.amount} crate{if r.amount == 1 then "" else "s"}`
+			elseif r.kind == "boost" then
+				local kind = if r.boostKind == "production" then "Milk" else "Cash"
+				local mult = num(r.mult) or 2
+				local secs = num(r.seconds)
+				return `x{Format.Number(mult)} {kind}{if secs then " " .. Format.Time(secs) else ""}`
+			end
+		end
 		local parts = {}
 		if num(r.cash) then
 			table.insert(parts, Format.Cash(r.cash))
@@ -122,6 +135,11 @@ local function collect(): { Quest }
 		end
 	end
 	table.sort(out, function(a, b)
+		local na = tonumber(string.match(a.id, "%d+$"))
+		local nb = tonumber(string.match(b.id, "%d+$"))
+		if na and nb then
+			return na < nb
+		end
 		return a.id < b.id
 	end)
 	return out
@@ -234,7 +252,7 @@ function QuestsPanel:Init()
 		text = "",
 		color = Colors.GreyDark,
 		size = UDim2.new(1, 0, 0, 22),
-		position = UDim2.new(0, 0, 1, 0),
+		position = UDim2.fromScale(0, 1),
 		anchor = Vector2.new(0, 1),
 		stroke = 0,
 	})

@@ -58,7 +58,7 @@ function Menu:Init()
 			end,
 		})
 		caption.Size = UDim2.new(1, -16, 0.6, -4)
-		caption.Position = UDim2.new(0.5, 0, 0.36, 0)
+		caption.Position = UDim2.fromScale(0.5, 0.36)
 		local stroke = caption:FindFirstChildOfClass("UIStroke")
 		if stroke then
 			stroke.Enabled = false

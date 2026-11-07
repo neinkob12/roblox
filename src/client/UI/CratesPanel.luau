@@ -155,7 +155,7 @@ local function playSpin(tier: number, source: string)
 		font = Theme.TitleFont,
 		color = if source == "premium" then Colors.Purple else Colors.Yellow,
 		size = UDim2.fromOffset(600, 54),
-		position = UDim2.new(0.5, 0, 0.12, 0),
+		position = UDim2.fromScale(0.5, 0.12),
 		anchor = Vector2.new(0.5, 0.5),
 		stroke = 4,
 	})
@@ -243,7 +243,7 @@ local function playSpin(tier: number, source: string)
 		name = "Hint",
 		text = "Tap to continue",
 		size = UDim2.fromOffset(240, 24),
-		position = UDim2.new(0.5, 0, 0.95, 0),
+		position = UDim2.fromScale(0.5, 0.95),
 		anchor = Vector2.new(0.5, 0.5),
 		color = Color3.fromRGB(220, 220, 230),
 	})
@@ -307,7 +307,7 @@ function CratesPanel:Init()
 		name = "Icon",
 		text = "📦",
 		size = UDim2.fromOffset(90, 90),
-		position = UDim2.new(0.5, 0, 0, 0),
+		position = UDim2.fromScale(0.5, 0),
 		anchor = Vector2.new(0.5, 0),
 		stroke = 0,
 	})
