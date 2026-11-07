@@ -30,6 +30,9 @@ export type Step = {
 	target: Target,
 	done: (data: any, ctx: Ctx) -> boolean,
 	autoSeconds: number?, -- info steps: advance after this many seconds
+	-- keep the previous step's "collected cash" state (server: its baseEarned) so a collect
+	-- that already happened during the previous step counts for this one
+	carryCollect: boolean?,
 }
 
 local Tutorial = {}
@@ -58,6 +61,15 @@ Tutorial.ArrowColor = Color3.fromRGB(255, 215, 60)
 -- Info steps (no action needed) advance on their own after this long.
 local INFO_SECONDS = 8
 
+-- Cash was collected since the step started (client: dairyCash dropped to 0, server: more earned).
+local function collectedSinceStart(data: any, ctx: Ctx): boolean
+	if ctx.collected then
+		return true
+	end
+	local base = ctx.baseEarned
+	return base ~= nil and (data.totalCashEarned or 0) > base
+end
+
 local function ownsTier2Plus(data: any): boolean
 	local cows = data.cows
 	if type(cows) ~= "table" then
@@ -85,21 +97,20 @@ Tutorial.Steps = {
 		id = "deposit",
 		text = "Bring the milk to the Dairy! (high Milk x = more cash)",
 		target = { scope = "dairy", name = "DepositPad" },
-		done = function(data, _ctx)
-			-- the queue can sell out fast, so already-sold cash also counts
-			return (data.canMilk or 0) <= 0 and ((data.dairyQueue or 0) > 0 or (data.dairyCash or 0) > 0)
+		done = function(data, ctx)
+			-- the queue can sell out fast and the CashPad is close, so sold or even already
+			-- collected cash also counts
+			return (data.canMilk or 0) <= 0
+				and ((data.dairyQueue or 0) > 0 or (data.dairyCash or 0) > 0 or collectedSinceStart(data, ctx))
 		end,
 	},
 	{
 		id = "collect",
 		text = "Collect your cash!",
 		target = { scope = "dairy", name = "CashPad" },
+		carryCollect = true, -- a collect during the deposit step already counts
 		done = function(data, ctx)
-			if ctx.collected then
-				return true
-			end
-			local base = ctx.baseEarned
-			return base ~= nil and (data.totalCashEarned or 0) > base
+			return collectedSinceStart(data, ctx)
 		end,
 	},
 	{

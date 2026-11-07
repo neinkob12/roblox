@@ -5,6 +5,8 @@
 --   * a big friendly banner (bottom-center, above the sell chip) with a Skip button
 --   * a Beam from the character to the step's target part
 --   * a bouncing, spinning 3D arrow (built from Parts) above the target
+-- The banner hides while a panel is open (it sits on a higher layer and would steal taps) and
+-- while toasts reach down into it. Settings "Reduce motion" turns off bounce, spin and pop.
 -- When a step's condition (Config/Tutorial) is met it sends RequestTutorialStep(current + 1).
 -- The server re-validates everything. Never blocks gameplay: all world visuals are local,
 -- non-colliding, non-touching and non-queryable. Missing targets are skipped gracefully.
@@ -41,6 +43,10 @@ local textLabel: TextLabel? = nil
 local skipButton: TextButton? = nil
 local skipCaption: TextLabel? = nil
 local skipArmedUntil = 0
+local bannerWanted = false -- a step (or the thank-you) wants the banner shown
+local BANNER_BOTTOM = 106 -- reference px from the bottom edge (just above the sell chip)
+local BANNER_HEIGHT = 72
+local refreshVisibility: () -> () -- defined in the visibility section below
 
 -- world visuals
 local arrow: Model? = nil
@@ -180,7 +186,7 @@ local function showVisuals(part: BasePart)
 			return
 		end
 		-- arrow: tip hovers above the top of the target, bounces and spins
-		local t = os.clock() - t0
+		local t = if C.ReduceMotion() then 0 else os.clock() - t0
 		local top = tgt.Position + Vector3.new(0, tgt.Size.Y / 2 + Tutorial.ArrowHeight, 0)
 		local bounce = math.abs(math.sin(t * Tutorial.ArrowBounceSpeed)) * Tutorial.ArrowBounce
 		a:PivotTo(CFrame.new(top + Vector3.new(0, bounce, 0)) * CFrame.Angles(0, t * Tutorial.ArrowSpinSpeed, 0))
@@ -214,7 +220,9 @@ end
 
 local function popBanner()
 	local s = bannerScale
-	if s then
+	if s and C.ReduceMotion() then
+		s.Scale = 1
+	elseif s then
 		s.Scale = 0.6
 		C.Tween(s, 0.35, { Scale = 1 }, Enum.EasingStyle.Back)
 	end
@@ -225,7 +233,7 @@ local function setBanner(stepText: string, text: string, color: Color3?)
 	if not b then
 		return
 	end
-	b.Visible = true
+	bannerWanted = true
 	b.BackgroundColor3 = color or Colors.Blue
 	if stepLabel then
 		stepLabel.Text = stepText
@@ -234,9 +242,11 @@ local function setBanner(stepText: string, text: string, color: Color3?)
 		textLabel.Text = text
 	end
 	popBanner()
+	refreshVisibility()
 end
 
 local function hideBanner()
+	bannerWanted = false
 	if banner then
 		banner.Visible = false
 	end
@@ -284,8 +294,8 @@ local function buildBanner()
 	-- event chip, truck banner and toasts. 380 wide keeps it clear of the lifted cash block on
 	-- the left (x 12..262) and the mobile jump button on the right.
 	b.AnchorPoint = Vector2.new(0.5, 1)
-	b.Position = UDim2.new(0.5, 0, 1, -106)
-	b.Size = UDim2.fromOffset(380, 72)
+	b.Position = UDim2.new(0.5, 0, 1, -BANNER_BOTTOM)
+	b.Size = UDim2.fromOffset(380, BANNER_HEIGHT)
 	b.BackgroundColor3 = Colors.Blue
 	b.BorderSizePixel = 0
 	b.Visible = false
@@ -343,6 +353,72 @@ local function buildBanner()
 	})
 	skipButton = btn
 	skipCaption = caption
+end
+
+-------------------------------------------------------------------------------- visibility
+
+-- Found lazily by name (B1/C6 own these GUIs): PlayerGui.Panels.Root.Dim is visible while any
+-- panel is open; PlayerGui.Notifications.Root.Stack holds the toasts.
+local panelDim: GuiObject? = nil
+local toastStack: GuiObject? = nil
+
+local function findGui(path: { string }): GuiObject?
+	local node: Instance? = player:FindFirstChildOfClass("PlayerGui")
+	for _, name in path do
+		if not node then
+			return nil
+		end
+		node = node:FindFirstChild(name)
+	end
+	if node and node:IsA("GuiObject") then
+		return node
+	end
+	return nil
+end
+
+local function panelOpen(): boolean
+	if not panelDim or not panelDim.Parent then
+		panelDim = findGui({ "Panels", "Root", "Dim" })
+	end
+	local d = panelDim
+	return d ~= nil and d.Visible
+end
+
+-- True when a visible toast's bottom edge reaches into the banner's area.
+local function toastOverlaps(b: Frame): boolean
+	if not toastStack or not toastStack.Parent then
+		toastStack = findGui({ "Notifications", "Root", "Stack" })
+	end
+	local stack = toastStack
+	local root = b.Parent
+	if not stack or not root or not root:IsA("GuiObject") then
+		return false
+	end
+	local uiScale = root:FindFirstChildOfClass("UIScale")
+	local s = if uiScale then uiScale.Scale else 1
+	local bannerTop = root.AbsolutePosition.Y + root.AbsoluteSize.Y - (BANNER_BOTTOM + BANNER_HEIGHT) * s
+	for _, child in stack:GetChildren() do
+		if child:IsA("GuiObject") and child.Visible then
+			if child.AbsolutePosition.Y + child.AbsoluteSize.Y > bannerTop - 4 then
+				return true
+			end
+		end
+	end
+	return false
+end
+
+function refreshVisibility()
+	local b = banner
+	if not b then
+		return
+	end
+	local show = bannerWanted and not panelOpen() and not toastOverlaps(b)
+	if b.Visible ~= show then
+		b.Visible = show
+		if not show then
+			resetSkip() -- a hidden banner never keeps a half-armed skip
+		end
+	end
 end
 
 -------------------------------------------------------------------------------- steps
@@ -435,7 +511,8 @@ local function onStep(value: any)
 	if not def then
 		return
 	end
-	ctx = { startedAt = os.clock() }
+	local carried = def.carryCollect == true and previous == step - 1 and ctx.collected == true
+	ctx = { startedAt = os.clock(), collected = if carried then true else nil }
 	if skipButton then
 		skipButton.Visible = true
 	end
@@ -465,6 +542,14 @@ function TutorialController:Start()
 	end)
 
 	DataController:OnChanged("tutorialStep", onStep)
+
+	-- panels and toasts come and go; a cheap poll keeps this simple and robust
+	while true do
+		task.wait(0.15)
+		if bannerWanted then
+			refreshVisibility()
+		end
+	end
 end
 
 return TutorialController
