@@ -14,6 +14,7 @@ local Pets = {}
 
 Pets.MaxInventory = 50 -- pets owned (eggs waiting in nests count toward it when buying)
 Pets.MergeCount = 5 -- identical pets merged into 1 of the next variant
+Pets.MaxReleasePerRequest = 50 -- RequestReleasePets array limit. Releasing gives NO refund (no cash loop)
 Pets.SpeedCap = 0.3 -- total walk speed bonus (+30%)
 Pets.LuckCap = 1.0 -- total luck (+100%)
 Pets.MilkCap = 3.0 -- total milk bonus (+300%); milk and cash multiply, so pets give at most x16 income

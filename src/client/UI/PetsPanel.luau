@@ -5,6 +5,9 @@
 --   Pets tab: 50-slot inventory grid (rarity colors, variant badges, equipped mark). Tapping a pet
 --     selects it; the detail pane shows it with Equip/Unequip (RequestEquipPet), "Merge 5 into
 --     Golden/Rainbow" (RequestMergePets) and "Merge all" (every group that has 5).
+--     "Release" (RequestReleasePets, no refund) for the selected unequipped pet, and "Release low"
+--     for every unequipped Common/Uncommon Normal. Epic+, Golden/Rainbow and the bulk button need a
+--     second tap within CONFIRM_SECONDS.
 --   Index tab: the 45 entries (15 pets x 3 variants), silhouettes for undiscovered ones and the
 --     "+2% milk per 5" milestone.
 --   Menu badge "Pets" = ready eggs in nests + an available free egg.
@@ -30,6 +33,8 @@ local CELL = 64
 local CELL_GAP = 6
 local GRID_W = 440
 local MERGE_GAP = 0.35 -- seconds between merge requests (server debounce is 0.3)
+local CONFIRM_SECONDS = 3 -- second tap window for risky releases
+local LOW_RARITIES = { common = true, uncommon = true } -- "Release low" targets (Normal variant only)
 
 type PetRow = { uid: string, id: string, variant: string, equipped: boolean, order: number }
 
@@ -53,6 +58,12 @@ local equipCaption: TextLabel
 local mergeBtn: TextButton
 local mergeCaption: TextLabel
 local mergeAllBtn: TextButton
+local releaseBtn: TextButton
+local releaseCaption: TextLabel
+local releaseLowBtn: TextButton
+local releaseLowCaption: TextLabel
+local armed: { [string]: number } = {} -- button key -> os.clock() of the first tap
+local refreshDetailLater: () -> () = function() end -- set to refreshDetail once it exists
 
 local selected: string? = nil
 local gridDirty = true
@@ -168,6 +179,51 @@ end
 
 ------------------------------------------------------------------------------ header
 
+-- unequipped Common/Uncommon Normal pets, at most Pets.MaxReleasePerRequest
+local function lowReleaseUids(): { string }
+	local out = {}
+	local eq = equippedList()
+	for uid, p in petsTable() do
+		local def = if typeof(p) == "table" then Pets.ById[p.id] else nil
+		if
+			def
+			and LOW_RARITIES[def.rarity]
+			and (p.variant or "normal") == "normal"
+			and not table.find(eq, uid)
+			and #out < Pets.MaxReleasePerRequest
+		then
+			table.insert(out, uid)
+		end
+	end
+	table.sort(out)
+	return out
+end
+
+local function needsConfirm(id: string, variant: string): boolean
+	local def = Pets.ById[id]
+	local r = def and Pets.RarityById[def.rarity]
+	return variant ~= "normal" or (r ~= nil and r.order >= 4)
+end
+
+-- true when the action may run now; otherwise arms the button for a second tap
+local function confirmed(key: string, caption: TextLabel, prompt: string): boolean
+	local t = armed[key]
+	if t and os.clock() - t <= CONFIRM_SECONDS then
+		armed[key] = nil
+		return true
+	end
+	armed[key] = os.clock()
+	caption.Text = prompt
+	task.delay(CONFIRM_SECONDS + 0.05, function()
+		local at = armed[key]
+		if at and os.clock() - at > CONFIRM_SECONDS then
+			armed[key] = nil
+			refreshDetailLater()
+		end
+	end)
+	return false
+end
+
 local function refreshHeader()
 	local d = data()
 	local owned = 0
@@ -204,6 +260,14 @@ local function selectedRow(): PetRow?
 	return { uid = selected, id = pet.id, variant = pet.variant or "normal", equipped = eq, order = 0 }
 end
 
+local function refreshReleaseLow()
+	local n = #lowReleaseUids()
+	if not armed.releaseLow then
+		releaseLowCaption.Text = `Release low ({n})`
+	end
+	C.SetButtonEnabled(releaseLowBtn, n > 0)
+end
+
 local function refreshDetail()
 	if detailCleanup then
 		detailCleanup()
@@ -220,6 +284,9 @@ local function refreshDetail()
 		equipCaption.Text = "Equip"
 		C.SetButtonEnabled(mergeBtn, false)
 		mergeCaption.Text = "Merge 5"
+		C.SetButtonEnabled(releaseBtn, false)
+		releaseCaption.Text = "Release"
+		refreshReleaseLow()
 		return
 	end
 	emptyHint.Visible = false
@@ -255,7 +322,14 @@ local function refreshDetail()
 		mergeCaption.Text = "Max variant"
 		C.SetButtonEnabled(mergeBtn, false)
 	end
+
+	if not armed["release:" .. row.uid] then
+		releaseCaption.Text = if row.equipped then "Unequip to release" else "Release"
+	end
+	C.SetButtonEnabled(releaseBtn, not row.equipped)
+	refreshReleaseLow()
 end
+refreshDetailLater = refreshDetail
 
 ------------------------------------------------------------------------------ grid
 
@@ -458,6 +532,29 @@ local function onMerge()
 	if row and Pets.NextVariant[row.variant] and countOf(row.id, row.variant) >= Pets.MergeCount then
 		runMerges({ { id = row.id, variant = row.variant, times = 1 } })
 	end
+end
+
+local function onRelease()
+	local row = selectedRow()
+	if not row or row.equipped then
+		return
+	end
+	local key = "release:" .. row.uid -- the confirm belongs to this pet, not to the button
+	if needsConfirm(row.id, row.variant) and not confirmed(key, releaseCaption, "Tap again!") then
+		return
+	end
+	Net.Event("RequestReleasePets"):FireServer({ row.uid })
+end
+
+local function onReleaseLow()
+	local uids = lowReleaseUids()
+	if #uids == 0 then
+		return
+	end
+	if not confirmed("releaseLow", releaseLowCaption, `Release {#uids}? Tap again`) then
+		return
+	end
+	Net.Event("RequestReleasePets"):FireServer(uids)
 end
 
 ------------------------------------------------------------------------------ refresh
@@ -670,11 +767,29 @@ function PetsPanel:Init()
 		text = "Merge all",
 		color = Colors.PurpleDark,
 		size = UDim2.new(1, -12, 0, Theme.MinTouch),
-		position = UDim2.fromOffset(6, 184),
+		position = UDim2.fromOffset(6, 164),
 		zIndex = 3,
 		onClick = function()
 			runMerges(mergeGroups())
 		end,
+	})
+	releaseBtn, releaseCaption = C.Button(detail, {
+		name = "Release",
+		text = "Release",
+		color = Colors.Red,
+		size = half,
+		position = UDim2.fromOffset(6, 214),
+		zIndex = 3,
+		onClick = onRelease,
+	})
+	releaseLowBtn, releaseLowCaption = C.Button(detail, {
+		name = "ReleaseLow",
+		text = "Release low",
+		color = Colors.Red,
+		size = half,
+		position = UDim2.new(0.5, 3, 0, 214),
+		zIndex = 3,
+		onClick = onReleaseLow,
 	})
 
 	-- Index page
