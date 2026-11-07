@@ -193,11 +193,12 @@ local function showVisuals(part: BasePart)
 				if ca then
 					ca:Destroy()
 				end
-				ca = Instance.new("Attachment")
-				ca.Name = "TutorialFrom"
-				ca.Position = Vector3.new(0, -1.5, 0)
-				ca.Parent = hrp
-				charAttachment = ca
+				local fresh = Instance.new("Attachment")
+				fresh.Name = "TutorialFrom"
+				fresh.Position = Vector3.new(0, -1.5, 0)
+				fresh.Parent = hrp
+				charAttachment = fresh
+				ca = fresh
 			end
 			bm.Attachment0 = ca
 			bm.Attachment1 = targetAttachment
