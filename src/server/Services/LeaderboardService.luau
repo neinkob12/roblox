@@ -310,7 +310,7 @@ function LeaderboardService:Start()
 		local userId = player.UserId
 		task.spawn(function()
 			for _, board in boards do
-				pcall(write :: any, board, player, data)
+				pcall(write, board, player, data)
 				board.written[userId] = nil
 			end
 		end)
@@ -336,7 +336,7 @@ function LeaderboardService:Start()
 		for _, player in players do
 			if player.Parent == Players then
 				for _, board in boards do
-					local ok, err = pcall(write, board, player)
+					local ok, err = pcall(write :: any, board, player)
 					if not ok then
 						warn(`[LeaderboardService] write failed: {err}`)
 					end
