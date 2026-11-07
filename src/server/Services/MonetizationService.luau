@@ -120,7 +120,7 @@ local GRANTS: { [string]: (Player, any) -> () } = {
 		local crateModule = script.Parent:FindFirstChild("CrateService")
 		local crateService: any = nil
 		if crateModule and crateModule:IsA("ModuleScript") then
-			crateService = require(crateModule :: any)
+			crateService = require(script.Parent.CrateService)
 		end
 		if crateService and type(crateService.GiveCrate) == "function" then
 			-- opens immediately with better odds, fires CrateOpened(tier, "premium") for the spin UI
@@ -178,7 +178,7 @@ local function processPurchase(player: Player, purchaseId: string, productKey: s
 			warn(`[Monetization] no grant function for {productKey}`)
 			return Enum.ProductPurchaseDecision.NotProcessedYet
 		end
-		local ok, err = pcall(grant, player, data)
+		local ok, err = pcall(grant :: any, player, data)
 		if not ok then
 			warn(`[Monetization] grant {productKey} failed: {err}`)
 			return Enum.ProductPurchaseDecision.NotProcessedYet

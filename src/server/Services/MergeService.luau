@@ -98,10 +98,15 @@ function MergeService:Start()
 		elapsed += 1
 		local autoTick = elapsed % Economy.AutoMergeSeconds == 0
 		for _, player in Players:GetPlayers() do
-			if autoTick and player:GetAttribute("Pass_AutoMerge") == true then
-				MergeService:MergeAll(player, true)
+			local ok, err = pcall(function()
+				if autoTick and player:GetAttribute("Pass_AutoMerge") == true then
+					MergeService:MergeAll(player, true)
+				end
+				refreshLabel(player)
+			end)
+			if not ok then
+				warn(`[MergeService] tick failed for {player.Name}: {err}`)
 			end
-			refreshLabel(player)
 		end
 	end
 end

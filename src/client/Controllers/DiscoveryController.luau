@@ -429,7 +429,7 @@ local function pump()
 	task.spawn(function()
 		while #queue > 0 do
 			local tier = table.remove(queue, 1) :: number
-			local ok, err = pcall(play, tier)
+			local ok, err = pcall(play :: any, tier)
 			if not ok then
 				warn(`[DiscoveryController] reveal failed: {err}`)
 			end

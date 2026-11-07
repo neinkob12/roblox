@@ -13,12 +13,13 @@ local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
 local HerdUtil = require(script.Parent.HerdUtil)
+local Pricing = require(ReplicatedStorage.Shared.Pricing)
 local WalkSpeedService = require(script.Parent.WalkSpeedService)
 
 local RebirthService = {}
 
 function RebirthService:Cost(rebirths: number): number
-	return math.floor(Economy.Rebirth.BaseCost * Economy.Rebirth.CostGrowth ^ rebirths)
+	return Pricing.Rebirth(rebirths)
 end
 
 local function onRequest(player: Player)
@@ -35,10 +36,8 @@ local function onRequest(player: Player)
 		return
 	end
 
-	-- cash -> StartingCash through SpendCash (no yield between the check and here)
-	if not DataService:SpendCash(player, data.cash - Economy.StartingCash) then
-		return
-	end
+	-- set directly: SpendCash(cash - StartingCash) loses precision above 2^53
+	data.cash = Economy.StartingCash
 
 	local cows = {}
 	for tier, count in Economy.StartingCows do
@@ -60,6 +59,7 @@ local function onRequest(player: Player)
 
 	for _, key in
 		{
+			"cash",
 			"cows",
 			"cowsBought",
 			"cratesBought",

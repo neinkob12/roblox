@@ -155,7 +155,7 @@ function ProductionService:Start()
 		local dt = math.min(now - last, Economy.Tank.TickSeconds * 3)
 		last = now
 		for _, player in Players:GetPlayers() do
-			local ok, err = pcall(tickPlayer, player, dt)
+			local ok, err = pcall(tickPlayer :: any, player, dt)
 			if not ok then
 				warn(`[ProductionService] tick failed for {player.Name}: {err}`)
 			end

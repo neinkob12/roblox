@@ -65,7 +65,7 @@ end
 -- Cylinder from world point a to world point b. +X axis = flow direction a -> b.
 function Builder.pipe(a: Vector3, b: Vector3, diameter: number, props: Props): BasePart
 	local delta = b - a
-	local p = Builder.decor(props)
+	local p = Builder.decor(props) :: Part
 	p.Shape = Enum.PartType.Cylinder
 	p.Size = Vector3.new(delta.Magnitude, diameter, diameter)
 	p.CFrame = Builder.axisCFrame((a + b) / 2, delta)
@@ -74,7 +74,7 @@ end
 
 -- Ball joint (hides the seams where pipes bend).
 function Builder.ball(pos: Vector3, diameter: number, props: Props): BasePart
-	local p = Builder.decor(props)
+	local p = Builder.decor(props) :: Part
 	p.Shape = Enum.PartType.Ball
 	p.Size = Vector3.new(diameter, diameter, diameter)
 	p.CFrame = CFrame.new(pos)
@@ -83,7 +83,7 @@ end
 
 -- Vertical-axis cylinder (disk, pillar, bottle...). `bottomCenter` is the center of the bottom face.
 function Builder.vcyl(bottomCenter: Vector3, radius: number, height: number, props: Props): BasePart
-	local p = Builder.part(props)
+	local p = Builder.part(props) :: Part
 	p.Shape = Enum.PartType.Cylinder
 	p.Size = Vector3.new(height, radius * 2, radius * 2)
 	p.CFrame = CFrame.new(bottomCenter + Vector3.new(0, height / 2, 0)) * CFrame.Angles(0, 0, math.pi / 2)
