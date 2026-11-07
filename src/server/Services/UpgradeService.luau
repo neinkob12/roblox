@@ -9,9 +9,9 @@ local Net = require(ReplicatedStorage.Shared.Net)
 local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
 local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
-local HerdUtil = require(script.Parent.HerdUtil)
 local WalkSpeedService = require(script.Parent.WalkSpeedService)
 local Notify = require(script.Parent.Parent.Util.Notify)
+local Debounce = require(script.Parent.Parent.Util.Debounce)
 
 local UpgradeService = {}
 
@@ -23,7 +23,7 @@ local function onRequest(player: Player, id: unknown)
 	if not upgrade then
 		return
 	end
-	if not HerdUtil.Debounce(player, "upgrade", 0.15) then
+	if not Debounce.Try(player, "upgrade", 0.15) then
 		return
 	end
 	local data = DataService:Get(player)

@@ -19,12 +19,11 @@ local DataService = require(script.Parent.DataService)
 local PlotService = require(script.Parent.PlotService)
 local ProductionService = require(script.Parent.ProductionService)
 local Notify = require(script.Parent.Parent.Util.Notify)
+local Debounce = require(script.Parent.Parent.Util.Debounce)
 
 local CanService = {}
 
 local DEBOUNCE = 1
-local lastTouch: { [Player]: number } = {}
-local lastAuto: { [Player]: number } = {}
 local hookedTaps: { [BasePart]: boolean } = {}
 
 function CanService:GetCanCapacity(player: Player, data: any): number
@@ -59,11 +58,9 @@ local function onTapTouched(plot: Model, hit: BasePart)
 	if not player then
 		return
 	end
-	local now = os.clock()
-	if lastTouch[player] and now - lastTouch[player] < DEBOUNCE then
+	if not Debounce.Try(player, "tankTap", DEBOUNCE) then
 		return
 	end
-	lastTouch[player] = now
 	local data = DataService:Get(player)
 	if not data then
 		return
@@ -96,10 +93,6 @@ local function hookPlot(plot: Instance)
 end
 
 function CanService:Init()
-	Players.PlayerRemoving:Connect(function(player)
-		lastTouch[player] = nil
-		lastAuto[player] = nil
-	end)
 	DataService.PlayerLoaded:Connect(function(player: Player, data: any)
 		player:SetAttribute("CanCapacity", CanService:GetCanCapacity(player, data))
 	end)
@@ -121,7 +114,6 @@ function CanService:Start()
 	-- capacity attribute + autoCollect upgrade
 	while true do
 		task.wait(1)
-		local now = os.clock()
 		for _, player in Players:GetPlayers() do
 			local data = DataService:Get(player)
 			if data then
@@ -133,8 +125,7 @@ function CanService:Start()
 							Economy.Can.AutoCollectMinSeconds,
 							Economy.Can.AutoCollectBaseSeconds - lvl * Upgrades.ById.autoCollect.perLevel
 						)
-						if not lastAuto[player] or now - lastAuto[player] >= interval then
-							lastAuto[player] = now
+						if Debounce.Try(player, "autoCollect", interval) then
 							CanService:FillCan(player)
 						end
 					end

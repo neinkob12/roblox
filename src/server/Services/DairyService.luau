@@ -24,13 +24,11 @@ local Upgrades = require(ReplicatedStorage.Shared.Config.Upgrades)
 local DataService = require(script.Parent.DataService)
 local PlotService = require(script.Parent.PlotService)
 local Notify = require(script.Parent.Parent.Util.Notify)
+local Debounce = require(script.Parent.Parent.Util.Debounce)
 
 local DairyService = {}
 
 local DEBOUNCE = 1
-local lastDeposit: { [Player]: number } = {}
-local lastCollect: { [Player]: number } = {}
-local lastAutoSell: { [Player]: number } = {}
 local rng = Random.new()
 
 local dairy: Instance? = nil
@@ -92,18 +90,9 @@ local function sellTick(dt: number)
 	end
 end
 
-local function debounced(map: { [Player]: number }, player: Player): boolean
-	local now = os.clock()
-	if map[player] and now - map[player] < DEBOUNCE then
-		return true
-	end
-	map[player] = now
-	return false
-end
-
 local function onDepositTouched(hit: BasePart)
 	local player = PlotService:GetPlayerFromHit(hit)
-	if not player or debounced(lastDeposit, player) then
+	if not player or not Debounce.Try(player, "depositPad", DEBOUNCE) then
 		return
 	end
 	local data = DataService:Get(player)
@@ -121,7 +110,7 @@ end
 
 local function onCashTouched(hit: BasePart)
 	local player = PlotService:GetPlayerFromHit(hit)
-	if not player or debounced(lastCollect, player) then
+	if not player or not Debounce.Try(player, "cashPad", DEBOUNCE) then
 		return
 	end
 	local data = DataService:Get(player)
@@ -370,11 +359,6 @@ function DairyService:Init()
 	workspace:SetAttribute("TruckActive", false)
 	workspace:SetAttribute("TruckNextAt", os.time() + Economy.Truck.EverySeconds)
 	workspace:SetAttribute("TruckLeavesAt", 0)
-	Players.PlayerRemoving:Connect(function(player)
-		lastDeposit[player] = nil
-		lastCollect[player] = nil
-		lastAutoSell[player] = nil
-	end)
 end
 
 function DairyService:Start()
@@ -409,11 +393,9 @@ function DairyService:Start()
 			Safe.Run("DairyService truck", truckTick)
 			Safe.Run("DairyService board", updateBoard)
 			-- Auto Sell gamepass: deposit the can remotely
-			local now = os.clock()
 			for _, player in Players:GetPlayers() do
 				if player:GetAttribute("Pass_AutoSell") then
-					if not lastAutoSell[player] or now - lastAutoSell[player] >= Economy.Dairy.AutoSellSeconds then
-						lastAutoSell[player] = now
+					if Debounce.Try(player, "autoSell", Economy.Dairy.AutoSellSeconds) then
 						Safe.Run("DairyService auto sell", DairyService.Deposit, DairyService, player)
 					end
 				end

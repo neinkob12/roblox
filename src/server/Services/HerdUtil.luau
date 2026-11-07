@@ -7,7 +7,6 @@
 --   HerdUtil.GetPlot(player) -> Model?          workspace.Plots["Plot"..PlotId]
 --   HerdUtil.OwnsPlot(player, plot) -> boolean
 --   HerdUtil.PlayerFromHit(hit) -> Player?
---   HerdUtil.Debounce(player, key, seconds) -> boolean   true = allowed now
 --   HerdUtil.BindPlotPart(name, fn(part, plot))  calls fn once for every plot part with that name,
 --                                                 including plots/parts created later
 --   HerdUtil.BindPad(name, fn(player, plot, pad)) Touched + owner check + 1s per-player debounce
@@ -19,30 +18,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Net = require(ReplicatedStorage.Shared.Net)
 local Cows = require(ReplicatedStorage.Shared.Config.Cows)
 local DataService = require(script.Parent.DataService)
+local Debounce = require(script.Parent.Parent.Util.Debounce)
 
 local HerdUtil = {}
 
 local PAD_DEBOUNCE = 1
-
-local debounces: { [Player]: { [string]: number } } = {}
-Players.PlayerRemoving:Connect(function(player)
-	debounces[player] = nil
-end)
-
-function HerdUtil.Debounce(player: Player, key: string, seconds: number): boolean
-	local t = debounces[player]
-	if not t then
-		t = {}
-		debounces[player] = t
-	end
-	local now = os.clock()
-	local last = t[key]
-	if last and now - last < seconds then
-		return false
-	end
-	t[key] = now
-	return true
-end
 
 -- Adds cows without replicating "cows". Returns true if "discovered" changed.
 function HerdUtil.AddCowsRaw(player: Player, data: any, tier: number, n: number): boolean
@@ -160,7 +140,7 @@ function HerdUtil.BindPad(name: string, fn: (Player, Model, BasePart) -> ())
 			if not DataService:Get(player) then
 				return
 			end
-			if not HerdUtil.Debounce(player, "pad:" .. name, PAD_DEBOUNCE) then
+			if not Debounce.Try(player, "pad:" .. name, PAD_DEBOUNCE) then
 				return
 			end
 			fn(player, plot, pad)

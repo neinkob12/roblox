@@ -20,8 +20,8 @@ local Net = require(ReplicatedStorage.Shared.Net)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Codes = require(ReplicatedStorage.Shared.Config.Codes)
 local DataService = require(script.Parent.DataService)
-local HerdUtil = require(script.Parent.HerdUtil)
 local Notify = require(script.Parent.Parent.Util.Notify)
+local Debounce = require(script.Parent.Parent.Util.Debounce)
 
 local CodesService = {}
 
@@ -88,7 +88,7 @@ local function redeem(player: Player, raw: any): (boolean, string)
 	if typeof(raw) ~= "string" or #raw == 0 or #raw > Codes.MaxLength * 2 then
 		return false, "Invalid code"
 	end
-	if not HerdUtil.Debounce(player, "redeemCode", Codes.CooldownSeconds) then
+	if not Debounce.Try(player, "redeemCode", Codes.CooldownSeconds) then
 		return false, "Slow down!"
 	end
 	local data = DataService:Get(player)

@@ -27,6 +27,7 @@ local DataService = require(script.Parent.DataService)
 local HerdUtil = require(script.Parent.HerdUtil)
 local Pricing = require(ReplicatedStorage.Shared.Pricing)
 local Notify = require(script.Parent.Parent.Util.Notify)
+local Debounce = require(script.Parent.Parent.Util.Debounce)
 
 local CrateConfig = Economy.Crate
 local CRATE_COLOR = Color3.fromRGB(255, 200, 60)
@@ -83,7 +84,7 @@ function CrateService:GiveCrate(player: Player, premium: boolean): number?
 end
 
 local function onOpen(player: Player)
-	if not HerdUtil.Debounce(player, "openCrate", 0.3) then
+	if not Debounce.Try(player, "openCrate", 0.3) then
 		return
 	end
 	local data = DataService:Get(player)
@@ -100,7 +101,7 @@ local function onOpen(player: Player)
 end
 
 local function onBuy(player: Player)
-	if not HerdUtil.Debounce(player, "buyCrate", 0.3) then
+	if not Debounce.Try(player, "buyCrate", 0.3) then
 		return
 	end
 	if not DataService:Get(player) then

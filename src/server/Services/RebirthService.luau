@@ -12,10 +12,10 @@ local Net = require(ReplicatedStorage.Shared.Net)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
-local HerdUtil = require(script.Parent.HerdUtil)
 local Pricing = require(ReplicatedStorage.Shared.Pricing)
 local WalkSpeedService = require(script.Parent.WalkSpeedService)
 local Notify = require(script.Parent.Parent.Util.Notify)
+local Debounce = require(script.Parent.Parent.Util.Debounce)
 
 local RebirthService = {}
 
@@ -24,7 +24,7 @@ function RebirthService:Cost(rebirths: number): number
 end
 
 local function onRequest(player: Player)
-	if not HerdUtil.Debounce(player, "rebirth", 1) then
+	if not Debounce.Try(player, "rebirth", 1) then
 		return
 	end
 	local data = DataService:Get(player)

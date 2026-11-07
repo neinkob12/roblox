@@ -48,9 +48,9 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
 local Quests = require(ReplicatedStorage.Shared.Config.Quests)
 local DataService = require(script.Parent.DataService)
-local HerdUtil = require(script.Parent.HerdUtil)
 local CodesService = require(script.Parent.CodesService)
 local Notify = require(script.Parent.Parent.Util.Notify)
+local Debounce = require(script.Parent.Parent.Util.Debounce)
 
 local QuestService = {}
 
@@ -218,7 +218,7 @@ local function claim(player: Player, questId: any)
 	if typeof(questId) ~= "string" or #questId > 20 then
 		return
 	end
-	if not HerdUtil.Debounce(player, "claimQuest", 0.3) then
+	if not Debounce.Try(player, "claimQuest", 0.3) then
 		return
 	end
 	local data = DataService:Get(player)
