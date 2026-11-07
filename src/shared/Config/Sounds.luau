@@ -181,7 +181,6 @@ Sounds.MusicFadeSeconds = 1.5
 Sounds.Moos = { "Moo1", "Moo2", "Moo3" }
 
 Sounds.Tuning = {
-	CrateRevealDelay = 3.7, -- matches the crate reel in UI/CratesPanel (3.6s spin)
 	VoiceAfterFanfare = 0.5, -- seconds between the new-cow fanfare and the voice shout
 	CoinMinGap = 0.25, -- coin blip throttle on frequent small cash increases
 	CanFillMinGap = 1.0,

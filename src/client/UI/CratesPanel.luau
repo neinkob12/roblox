@@ -22,6 +22,7 @@ local RevealQueue = require(script.Parent.Parent.Lib.RevealQueue)
 local C = require(script.Parent.Components)
 local Menu = require(script.Parent.Menu)
 local DataController = require(script.Parent.Parent.Controllers.DataController)
+local SoundController = require(script.Parent.Parent.Controllers.SoundController)
 
 local player = Players.LocalPlayer
 local Colors = Theme.Colors
@@ -210,6 +211,7 @@ local function playSpin(tier: number, source: string)
 	end
 
 	-- reveal
+	SoundController:Play("CrateReveal")
 	C.Tween(window, 0.2, { Size = UDim2.fromOffset(640, 0) })
 	task.wait(0.2)
 	window:Destroy()
@@ -352,6 +354,7 @@ function CratesPanel:Start()
 		end
 		local src = if typeof(source) == "string" then source else "crate"
 		RevealQueue.Push(function()
+			SoundController:Play("CrateSpin")
 			playSpin(tier, src)
 		end, 0)
 	end)
