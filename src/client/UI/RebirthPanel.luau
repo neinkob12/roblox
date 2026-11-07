@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Net = require(ReplicatedStorage.Shared.Net)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
+local Pricing = require(ReplicatedStorage.Shared.Pricing)
 local Theme = require(script.Parent.Theme)
 local C = require(script.Parent.Components)
 local DataController = require(script.Parent.Parent.Controllers.DataController)
@@ -25,7 +26,7 @@ local armed = false
 local armToken = 0
 
 local function cost(rebirths: number): number
-	return math.floor(Economy.Rebirth.BaseCost * Economy.Rebirth.CostGrowth ^ rebirths)
+	return Pricing.Rebirth(rebirths)
 end
 
 local function mult(rebirths: number): number
