@@ -12,6 +12,7 @@ local Economy = require(script.Parent.Config.Economy)
 local Upgrades = require(script.Parent.Config.Upgrades)
 local Events = require(script.Parent.Config.Events)
 local Pets = require(script.Parent.Config.Pets)
+local IndexRewards = require(script.Parent.Config.IndexRewards)
 
 local Multipliers = {}
 
@@ -93,6 +94,7 @@ end
 
 function Multipliers.Cash(player: Player, data: any): number
 	local m = 1 + Economy.Rebirth.CashMultiplierPerRebirth * (data.rebirths or 0)
+	m *= IndexRewards.CashMultiplier(data) -- E1: permanent bonus from claimed Index milestones
 	if player:GetAttribute("Pass_DoubleCash") then
 		m *= 2
 	end

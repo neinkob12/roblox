@@ -74,6 +74,9 @@ local TEMPLATE = {
 	nests = {} :: { [string]: { egg: string, readyAt: number, luck: number } },
 	petIndex = {} :: { [string]: boolean },
 	lastFreeEgg = 0,
+	dailyStreak = 0, -- E1 DailyService: days claimed in the current streak (see Config/Daily)
+	dailyLastClaim = 0, -- E1 DailyService: Multipliers.Now() of the last daily claim, 0 = never
+	indexClaimed = {} :: { number }, -- E1 IndexRewardService: claimed milestone counts, e.g. { 3, 6 }
 }
 
 local DataService = {}

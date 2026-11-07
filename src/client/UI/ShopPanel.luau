@@ -3,6 +3,8 @@
 -- with MarketplaceService. B3 MonetizationService grants the rewards on the server.
 -- Owned passes (Player attribute Pass_<Key>) show "OWNED". Products whose id is still 0
 -- show "Soon" and only toast instead of prompting.
+-- G0: the Premium Crate is a paid random item. Restricted players (PaidRandomRestricted ~= false)
+-- never see it; everyone else gets an "ODDS" button next to it (opens CratesPanel's odds list).
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
@@ -14,6 +16,7 @@ local Theme = require(script.Parent.Parent.Lib.Theme)
 local C = require(script.Parent.Parent.Lib.UiKit)
 local Panels = require(script.Parent.Components)
 local Notifications = require(script.Parent.Notifications)
+local CratesPanel = require(script.Parent.CratesPanel)
 
 local player = Players.LocalPlayer
 local Colors = Theme.Colors
@@ -31,6 +34,14 @@ local ShopPanel = {}
 
 type PassRow = { key: string, buy: TextButton, caption: TextLabel, robux: number }
 local passRows: { PassRow } = {}
+local premiumCard: Frame? = nil
+
+local function refreshPremium()
+	if premiumCard then
+		-- same rule as ComplianceService:IsPaidRandomRestricted (nil = not checked yet = hidden)
+		premiumCard.Visible = player:GetAttribute("PaidRandomRestricted") == false
+	end
+end
 
 local function productInfo(key: string, def: any): string
 	if typeof(def.productionSeconds) == "number" then
@@ -167,8 +178,30 @@ function ShopPanel:Init()
 					prompt("product", id)
 				end,
 			})
+			if key == "PremiumCrate" then
+				-- odds shown before buying, with a text label (paid random items policy)
+				C.Button(card, {
+					name = "Odds",
+					text = "ODDS",
+					color = Colors.Purple,
+					size = UDim2.fromOffset(100, Theme.MinTouch),
+					position = UDim2.new(1, -160, 0.5, 0),
+					anchor = Vector2.new(1, 0.5),
+					onClick = function()
+						CratesPanel.ShowOdds(true)
+					end,
+				})
+				for _, name in { "Name", "Info" } do
+					local label = card:FindFirstChild(name)
+					if label and label:IsA("GuiObject") then
+						label.Size = UDim2.new(1, -340, 0, label.Size.Y.Offset)
+					end
+				end
+				premiumCard = card
+			end
 		end
 	end
+	refreshPremium()
 end
 
 function ShopPanel:Start()
@@ -176,7 +209,9 @@ function ShopPanel:Start()
 		player:GetAttributeChangedSignal("Pass_" .. key):Connect(refreshPasses)
 	end
 	Panels.OnPanelOpened("Shop", refreshPasses)
+	player:GetAttributeChangedSignal("PaidRandomRestricted"):Connect(refreshPremium)
 	refreshPasses()
+	refreshPremium()
 end
 
 return ShopPanel

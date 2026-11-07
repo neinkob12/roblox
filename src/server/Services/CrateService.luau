@@ -4,6 +4,8 @@
 --     (max 1 drop per player per roll, x crateDropMultiplier during the CrateRain event).
 --     A glowing "?" crate appears at the plot's CrateSpawn; the owner touches it -> data.crates += 1.
 --   * RequestBuyCrate: price = max(BuyBasePrice, milk/sec * BuyPriceSecondsOfProduction).
+--     G0: refused for players in a paid-random-items restricted region (ComplianceService), because
+--     cash can be bought with Robux. Opening crates they already own stays allowed.
 --   * RequestOpenCrate: rolls Economy.Crate.Odds relative to the best owned tier.
 --
 --   CrateService:GiveCrate(player, premium) -> number?
@@ -30,6 +32,7 @@ local PlotService = require(script.Parent.PlotService)
 local Pads = require(script.Parent.Parent.Util.Pads)
 local Multipliers = require(ReplicatedStorage.Shared.Multipliers)
 local Rewards = require(script.Parent.Parent.Util.Rewards)
+local ComplianceService = require(script.Parent.ComplianceService)
 
 local CrateConfig = Economy.Crate
 local CRATE_COLOR = Color3.fromRGB(255, 200, 60)
@@ -104,6 +107,14 @@ local function onBuy(player: Player)
 		return
 	end
 	if not DataService:Get(player) then
+		return
+	end
+	if ComplianceService:IsPaidRandomRestricted(player) then
+		Notify.To(
+			player,
+			"Buying crates is not available in your region. Earn them from drops, quests and codes!",
+			"error"
+		)
 		return
 	end
 	local price = CrateService:BuyPrice(player)
