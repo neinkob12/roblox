@@ -7,6 +7,14 @@
 --   result, then the real cow model (Lib/CowViewport) pops up.
 --   Several results in a row are queued in the shared RevealQueue (C6), so a "NEW COW!"
 --   discovery from the same crate plays after the spin instead of on top of it.
+--
+-- G0 compliance (docs/CONTRACTS.md section 11, Roblox "paid random items" policy):
+--   * The odds of every outcome are always visible in the panel (summary line) and in full in the
+--     "ODDS" list, computed with shared/Odds (the exact table the server rolls with), live with the
+--     best tier. The list also has a Premium Crate tab (shift = Economy.Crate.PremiumOddsShift).
+--   * Restricted players (attribute PaidRandomRestricted ~= false) cannot buy: BUY is disabled with
+--     a note pointing to the free sources. Opening crates they already own stays allowed.
+--   CratesPanel.ShowOdds(premium) -> opens the odds list (ShopPanel uses it for the Premium Crate).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -14,6 +22,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Net = require(ReplicatedStorage.Shared.Net)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Pricing = require(ReplicatedStorage.Shared.Pricing)
+local Odds = require(ReplicatedStorage.Shared.Odds)
+local Economy = require(ReplicatedStorage.Shared.Config.Economy)
 local Cows = require(ReplicatedStorage.Shared.Config.Cows)
 local Theme = require(script.Parent.Parent.Lib.Theme)
 local RevealQueue = require(script.Parent.Parent.Lib.RevealQueue)
@@ -34,12 +44,25 @@ local REEL_CARDS = 34
 local RESULT_INDEX = 29
 local SPIN_TIME = 3.6
 
+local RESTRICTED_TEXT = "Not available in your region. Earn crates from drops, quests and codes!"
+local ODDS_ROW_H = 46
+
 local CratesPanel = {}
 
+local mainFrame: Frame
 local countText: TextLabel
+local oddsSummary: TextLabel
 local openBtn: TextButton
 local buyBtn: TextButton
 local buyCaption: TextLabel
+
+local oddsFrame: Frame
+local oddsTitle: TextLabel
+local oddsList: ScrollingFrame
+local oddsFooter: TextLabel
+local premiumTab: TextButton
+local normalTab: TextButton
+local oddsPremium = false
 
 local spinRoot: Frame
 
@@ -47,6 +70,131 @@ local function buyPrice(): number
 	-- same formula the server charges (shared/Pricing), so the button never lies
 	return Pricing.Crate(player, DataController:Get())
 end
+
+local function isRestricted(): boolean
+	-- same rule as ComplianceService:IsPaidRandomRestricted (nil = check not done yet = restricted)
+	return player:GetAttribute("PaidRandomRestricted") ~= false
+end
+
+-- same as CrateService bestTier: highest tier with count > 0 (1 if none)
+local function bestTier(data: any): number
+	local best = 1
+	local cows = if data and typeof(data.cows) == "table" then data.cows else {}
+	for key, count in cows do
+		local tier = tonumber(key)
+		if tier and typeof(count) == "number" and count > 0 and tier > best then
+			best = tier
+		end
+	end
+	return best
+end
+
+local function outcomes(premium: boolean): { Odds.Outcome }
+	local shift = if premium then Economy.Crate.PremiumOddsShift else 0
+	return Odds.Crate(bestTier(DataController:Get()), shift)
+end
+
+local function cowName(tier: number): string
+	local cow = Cows.Get(tier)
+	return if cow then cow.name else `Tier {tier}`
+end
+
+------------------------------------------------------------------------------ odds list
+
+local function renderOdds()
+	if not oddsFrame or not oddsFrame.Visible then
+		return
+	end
+	local restricted = isRestricted()
+	if restricted then
+		-- restricted players never see the Robux Premium Crate (ShopPanel hides it too)
+		oddsPremium = false
+	end
+	premiumTab.Visible = not restricted
+	C.SetButtonEnabled(normalTab, oddsPremium)
+	C.SetButtonEnabled(premiumTab, not oddsPremium)
+	oddsTitle.Text = if oddsPremium then "PREMIUM CRATE ODDS" else "MYSTERY CRATE ODDS"
+	for _, child in oddsList:GetChildren() do
+		if child:IsA("GuiObject") then
+			child:Destroy()
+		end
+	end
+	local list = outcomes(oddsPremium)
+	local total = 0
+	for i, o in list do
+		local tier: number = o.key
+		total += o.chance
+		local cow = Cows.Get(tier)
+		local card = C.Card(oddsList, ODDS_ROW_H, i)
+		card.Name = "Odds" .. tier
+		local chip = Instance.new("Frame")
+		chip.Name = "Chip"
+		chip.Size = UDim2.fromOffset(36, 36)
+		chip.Position = UDim2.new(0, 6, 0.5, 0)
+		chip.AnchorPoint = Vector2.new(0, 0.5)
+		chip.BackgroundColor3 = if cow then cow.bodyColor else Colors.Grey
+		chip.ZIndex = 3
+		C.Corner(chip, 10)
+		C.Stroke(chip, 2, Colors.Stroke, true)
+		chip.Parent = card
+		C.Label(chip, {
+			name = "Tier",
+			text = tostring(tier),
+			font = Theme.TitleFont,
+			size = UDim2.fromScale(0.8, 0.8),
+			position = UDim2.fromScale(0.5, 0.5),
+			anchor = Vector2.new(0.5, 0.5),
+			stroke = 2,
+			zIndex = 4,
+		})
+		C.Label(card, {
+			name = "Name",
+			text = `{cowName(tier)}  (Tier {tier})`,
+			color = Colors.TextDark,
+			size = UDim2.new(1, -150, 0, 28),
+			position = UDim2.new(0, 50, 0.5, 0),
+			anchor = Vector2.new(0, 0.5),
+			align = Enum.TextXAlignment.Left,
+			stroke = 0,
+			zIndex = 3,
+		})
+		C.Label(card, {
+			name = "Percent",
+			text = Odds.Percent(o.chance),
+			font = Theme.TitleFont,
+			color = Colors.TextDark,
+			size = UDim2.fromOffset(90, 30),
+			position = UDim2.new(1, -8, 0.5, 0),
+			anchor = Vector2.new(1, 0.5),
+			align = Enum.TextXAlignment.Right,
+			stroke = 0,
+			zIndex = 3,
+		})
+	end
+	oddsFooter.Text = `Based on your best cow (Tier {bestTier(DataController:Get())}). Total: {Odds.Percent(total)}`
+end
+
+local function showOdds(premium: boolean)
+	oddsPremium = premium and not isRestricted()
+	mainFrame.Visible = false
+	oddsFrame.Visible = true
+	renderOdds()
+end
+
+local function hideOdds()
+	oddsFrame.Visible = false
+	mainFrame.Visible = true
+end
+
+-- Opens the Crates panel on the odds list (premium = Premium Crate odds). Used by ShopPanel.
+function CratesPanel.ShowOdds(premium: boolean)
+	if not Panels.IsOpen("Crates") then
+		Panels.OpenPanel("Crates")
+	end
+	showOdds(premium)
+end
+
+------------------------------------------------------------------------------ main view
 
 local function refresh()
 	local data = DataController:Get()
@@ -56,11 +204,27 @@ local function refresh()
 	local crates = if typeof(data.crates) == "number" then data.crates else 0
 	local cash = if typeof(data.cash) == "number" then data.cash else 0
 	countText.Text = `You have {Format.Number(crates)} crate{if crates == 1 then "" else "s"}`
+	-- opening owned crates (earned for free) is allowed for everyone
 	C.SetButtonEnabled(openBtn, crates > 0)
-	local price = buyPrice()
-	buyCaption.Text = `BUY {Format.Cash(price)}`
-	C.SetButtonEnabled(buyBtn, cash >= price)
+
+	local parts = {}
+	for _, o in outcomes(false) do
+		table.insert(parts, `{cowName(o.key)} {Odds.Percent(o.chance)}`)
+	end
+	oddsSummary.Text = "Odds: " .. table.concat(parts, "  |  ")
+
+	if isRestricted() then
+		buyCaption.Text = RESTRICTED_TEXT
+		buyCaption.TextWrapped = true
+		C.SetButtonEnabled(buyBtn, false)
+	else
+		local price = buyPrice()
+		buyCaption.Text = `BUY {Format.Cash(price)}`
+		buyCaption.TextWrapped = false
+		C.SetButtonEnabled(buyBtn, cash >= price)
+	end
 	Menu.SetBadge("Crates", crates)
+	renderOdds()
 end
 
 ------------------------------------------------------------------------------ spin
@@ -251,37 +415,70 @@ end
 ------------------------------------------------------------------------------ panel
 
 function CratesPanel:Init()
-	local _, body = Panels.Panel("Crates", "MYSTERY CRATES", Vector2.new(460, 300), Colors.Yellow)
+	local _, body = Panels.Panel("Crates", "MYSTERY CRATES", Vector2.new(460, 340), Colors.Yellow)
 
-	local icon = C.Label(body, {
+	-------------------------------------------------------------------- main view
+	local main = Instance.new("Frame")
+	main.Name = "Main"
+	main.BackgroundTransparency = 1
+	main.Size = UDim2.fromScale(1, 1)
+	main.ZIndex = 2
+	main.Parent = body
+	mainFrame = main
+
+	local icon = C.Label(main, {
 		name = "Icon",
 		text = "📦",
-		size = UDim2.fromOffset(90, 90),
+		size = UDim2.fromOffset(64, 64),
 		position = UDim2.fromScale(0.5, 0),
 		anchor = Vector2.new(0.5, 0),
 		stroke = 0,
 	})
 	icon.Rotation = -6
 
-	countText = C.Label(body, {
+	-- the odds are one tap away BEFORE buying (policy: text label, not just an icon)
+	C.Button(main, {
+		name = "OddsButton",
+		text = "ODDS",
+		font = Theme.TitleFont,
+		color = Colors.Purple,
+		size = UDim2.fromOffset(110, Theme.MinTouch),
+		position = UDim2.fromScale(1, 0),
+		anchor = Vector2.new(1, 0),
+		onClick = function()
+			showOdds(false)
+		end,
+	})
+
+	countText = C.Label(main, {
 		name = "Count",
 		text = "You have 0 crates",
 		color = Colors.TextDark,
-		size = UDim2.new(1, 0, 0, 30),
-		position = UDim2.fromOffset(0, 96),
+		size = UDim2.new(1, -240, 0, 28),
+		position = UDim2.new(0.5, 0, 0, 68),
+		anchor = Vector2.new(0.5, 0),
 		stroke = 0,
 	})
 
-	C.Label(body, {
+	oddsSummary = C.Label(main, {
+		name = "OddsSummary",
+		text = "Odds:",
+		color = Colors.TextDark,
+		size = UDim2.new(1, 0, 0, 26),
+		position = UDim2.fromOffset(0, 100),
+		stroke = 0,
+	})
+
+	C.Label(main, {
 		name = "Info",
 		text = "Each crate gives a cow near your best tier.\nCows drop crates on your farm too!",
 		color = Colors.GreyDark,
 		size = UDim2.new(1, 0, 0, 40),
-		position = UDim2.fromOffset(0, 128),
+		position = UDim2.fromOffset(0, 130),
 		stroke = 0,
 	})
 
-	openBtn = C.Button(body, {
+	openBtn = C.Button(main, {
 		name = "Open",
 		text = "OPEN",
 		font = Theme.TitleFont,
@@ -293,7 +490,7 @@ function CratesPanel:Init()
 			Net.Event("RequestOpenCrate"):FireServer()
 		end,
 	})
-	buyBtn, buyCaption = C.Button(body, {
+	buyBtn, buyCaption = C.Button(main, {
 		name = "Buy",
 		text = "BUY",
 		font = Theme.TitleFont,
@@ -302,8 +499,86 @@ function CratesPanel:Init()
 		position = UDim2.new(0.75, 0, 1, -4),
 		anchor = Vector2.new(0.5, 1),
 		onClick = function()
+			if isRestricted() then
+				return -- the server refuses too (CrateService)
+			end
 			Net.Event("RequestBuyCrate"):FireServer()
 		end,
+	})
+
+	-------------------------------------------------------------------- odds view
+	local odds = Instance.new("Frame")
+	odds.Name = "OddsView"
+	odds.BackgroundTransparency = 1
+	odds.Size = UDim2.fromScale(1, 1)
+	odds.Visible = false
+	odds.ZIndex = 2
+	odds.Parent = body
+	oddsFrame = odds
+
+	oddsTitle = C.Label(odds, {
+		name = "OddsTitle",
+		text = "MYSTERY CRATE ODDS",
+		font = Theme.TitleFont,
+		color = Colors.PurpleDark,
+		size = UDim2.new(1, -250, 0, 30),
+		position = UDim2.fromOffset(0, 4),
+		align = Enum.TextXAlignment.Left,
+		stroke = 0,
+	})
+	normalTab = C.Button(odds, {
+		name = "MysteryTab",
+		text = "MYSTERY",
+		color = Colors.Yellow,
+		size = UDim2.fromOffset(120, Theme.MinTouch),
+		position = UDim2.new(1, -126, 0, -6),
+		anchor = Vector2.new(1, 0),
+		onClick = function()
+			oddsPremium = false
+			renderOdds()
+		end,
+	})
+	premiumTab = C.Button(odds, {
+		name = "PremiumTab",
+		text = "PREMIUM",
+		color = Colors.Purple,
+		size = UDim2.fromOffset(120, Theme.MinTouch),
+		position = UDim2.new(1, 0, 0, -6),
+		anchor = Vector2.new(1, 0),
+		onClick = function()
+			if not isRestricted() then
+				oddsPremium = true
+				renderOdds()
+			end
+		end,
+	})
+
+	local listHolder = Instance.new("Frame")
+	listHolder.Name = "ListHolder"
+	listHolder.BackgroundTransparency = 1
+	listHolder.Position = UDim2.fromOffset(0, 62)
+	listHolder.Size = UDim2.new(1, 0, 1, -62 - 96)
+	listHolder.ZIndex = 2
+	listHolder.Parent = odds
+	oddsList = C.ScrollList(listHolder, 6)
+
+	oddsFooter = C.Label(odds, {
+		name = "Footer",
+		text = "",
+		color = Colors.GreyDark,
+		size = UDim2.new(1, 0, 0, 24),
+		position = UDim2.new(0, 0, 1, -90),
+		stroke = 0,
+	})
+	C.Button(odds, {
+		name = "Back",
+		text = "BACK",
+		font = Theme.TitleFont,
+		color = Colors.Blue,
+		size = UDim2.fromOffset(190, Theme.MinTouch),
+		position = UDim2.new(0.5, 0, 1, -4),
+		anchor = Vector2.new(0.5, 1),
+		onClick = hideOdds,
 	})
 
 	local _, root = C.Screen("CrateSpin", Theme.Layers.Reveal)
@@ -314,8 +589,13 @@ function CratesPanel:Start()
 	DataController:OnChanged("crates", refresh)
 	DataController:OnChanged("cash", refresh)
 	DataController:OnChanged("cratesBought", refresh)
+	DataController:OnChanged("cows", refresh) -- best tier -> odds update live
 	player:GetAttributeChangedSignal("MilkPerSecond"):Connect(refresh)
-	Panels.OnPanelOpened("Crates", refresh)
+	player:GetAttributeChangedSignal("PaidRandomRestricted"):Connect(refresh)
+	Panels.OnPanelOpened("Crates", function()
+		hideOdds() -- every open starts on the main view (ShowOdds switches after opening)
+		refresh()
+	end)
 	Net.Event("CrateOpened").OnClientEvent:Connect(function(tier: number, source: string)
 		if typeof(tier) ~= "number" or not Cows.Get(tier) then
 			return

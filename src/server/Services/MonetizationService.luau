@@ -27,6 +27,7 @@ local DataService = require(script.Parent.DataService)
 local Notify = require(script.Parent.Parent.Util.Notify)
 local Rewards = require(script.Parent.Parent.Util.Rewards)
 local CrateService = require(script.Parent.CrateService)
+local ComplianceService = require(script.Parent.ComplianceService)
 
 local SAVE_WAIT_TIMEOUT = 60 -- seconds to wait for the save before telling Roblox to retry later
 
@@ -105,6 +106,20 @@ local function grantCash(player: Player, data: any, key: string)
 	Notify.To(player, `+{Format.Cash(amount)} from {entry.name}!`, "success")
 end
 
+-- Restricted-region fallback for PremiumCrate: same Robux value as Cash Pack M, as cash.
+local function grantPremiumCrateAsCash(player: Player, data: any)
+	local crate = Products.DevProducts.PremiumCrate
+	local rate = Products.DevProducts.CashMedium
+	local seconds = (rate.productionSeconds or 0) * crate.robux / rate.robux
+	local amount = Products.CashPackAmount(
+		Multipliers.MilkPerSecond(player, data),
+		Multipliers.Cash(player, data),
+		{ id = 0, name = crate.name, robux = crate.robux, productionSeconds = seconds }
+	)
+	Rewards.Cash(player, amount, false)
+	Notify.To(player, `Crates are not available in your region, so you got +{Format.Cash(amount)} instead!`, "success")
+end
+
 local GRANTS: { [string]: (Player, any) -> () } = {
 	CashSmall = function(player, data)
 		grantCash(player, data, "CashSmall")
@@ -115,7 +130,15 @@ local GRANTS: { [string]: (Player, any) -> () } = {
 	CashLarge = function(player, data)
 		grantCash(player, data, "CashLarge")
 	end,
-	PremiumCrate = function(player, _data)
+	PremiumCrate = function(player, data)
+		if ComplianceService:IsPaidRandomRestricted(player) then
+			-- G0: the shop hides the Premium Crate in restricted regions, but a stale client (or a
+			-- policy result that arrived after the prompt) can still send a receipt. Never drop a
+			-- purchase, and never give a Robux-paid random roll: grant CASH worth the Robux spent,
+			-- at the Cash Pack M rate. (A stored crate would still be a Robux-paid random item.)
+			grantPremiumCrateAsCash(player, data)
+			return
+		end
 		-- opens immediately with better odds, fires CrateOpened(tier, "premium") for the spin UI
 		if not CrateService:GiveCrate(player, true) then
 			error("PremiumCrate could not be granted") -- NotProcessedYet: Roblox retries the receipt
