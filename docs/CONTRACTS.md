@@ -156,3 +156,23 @@ One obvious place per concept. If you need one of these, use it; never write a l
 `src/server/Util/` and `src/client/Lib/` are plain modules: the loaders do NOT auto-load them.
 
 **Clock:** boost expiry (`data.boosts[id].expires`) uses `Multipliers.Now()` = `workspace:GetServerTimeNow()` on server and client. Workspace timer attributes (`EventEndsAt`, `TruckLeavesAt`, `MilkPriceNextAt`...) are `os.time()` on the server; the client compares them with `UiKit.Now()`, which is the same Unix scale.
+
+## 11. Wave 5: pets, eggs and nests, plus paid-random-item compliance
+
+**Decision (user):** keep the Robux cash packs and the Premium Crate, and implement the Roblox paid-random-items rules fully (https://create.roblox.com/docs/production/monetization/paid-random-items). Cash can be bought with Robux, so every crate or egg bought with cash counts as an "indirect paid random item".
+
+**Rules every random reward must follow:**
+1. **Show all odds before buying.** Every possible outcome appears as a number before purchase, and the numbers sum to 100%. Compute them with `shared/Odds.luau`, and roll on the server with the same table (`Odds.Roll`). Never keep a second copy of the odds.
+2. **Odds button.** The button that opens the odds has a text label ("Info" or "Odds"). An "(i)" icon alone isn't enough.
+3. **Regional restrictions.** If the player attribute `PaidRandomRestricted` is true (set by `ComplianceService`; it defaults to true until the check succeeds), the server refuses every cash or Robux purchase of a random reward. That covers buying crates or eggs with cash, the Premium Crate prompt and luck boosts. The UI hides or disables those buttons and points to free ways to earn them. Free rewards (drops, quests, codes, daily rewards, Index milestones) stay allowed.
+4. **Luck boosts** (luck pets, luck boosts) state their effect as a number, and the odds shown update live to include them.
+5. **No trading** of pets or cows in this version.
+
+**Ownership:**
+
+| Package | Owns |
+|---|---|
+| Lead | `shared/Odds.luau`, `server/Services/ComplianceService.luau`, `Multipliers.luau` (pet boosts get added here; F1 sends the exact formula in its PR, and the lead reviews it) |
+| G0 Crate compliance | `UI/CratesPanel.luau` (odds list with an Info button, restricted state), the `CrateService` buy gate, the `MonetizationService` PremiumCrate gate, and Shop panel gating for the Premium Crate |
+| F1 Pets and eggs (server) | `Config/Pets.luau`, `Config/Eggs.luau`, `server/Services/PetService.luau`, `server/Services/EggService.luau`, the data keys `pets`, `equippedPets`, `nests`, `petIndex`, and the boot-test scenario `tests/scenarios/pets.luau` |
+| F2 Pets and eggs (client and world) | `client/Controllers/PetFollowController.luau`, `client/Controllers/NestController.luau`, `client/UI/PetsPanel.luau`, `client/UI/EggShopPanel.luau`, `shared/PetModels.luau`, and the nest geometry in `server/World/PlotBuilder.luau` (Nest1..NestN parts per plot) |

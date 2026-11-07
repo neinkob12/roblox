@@ -20,10 +20,10 @@ local TweenService = game:GetService("TweenService")
 local Safe = require(ReplicatedStorage.Shared.Safe)
 local Net = require(ReplicatedStorage.Shared.Net)
 local Economy = require(ReplicatedStorage.Shared.Config.Economy)
-local Cows = require(ReplicatedStorage.Shared.Config.Cows)
 local Format = require(ReplicatedStorage.Shared.Format)
 local DataService = require(script.Parent.DataService)
 local Pricing = require(ReplicatedStorage.Shared.Pricing)
+local Odds = require(ReplicatedStorage.Shared.Odds)
 local Notify = require(script.Parent.Parent.Util.Notify)
 local Debounce = require(script.Parent.Parent.Util.Debounce)
 local PlotService = require(script.Parent.PlotService)
@@ -45,22 +45,8 @@ function CrateService:BuyPrice(player: Player): number
 end
 
 function CrateService:Roll(bestTier: number, shift: number): number
-	local totalWeight = 0
-	for _, o in CrateConfig.Odds do
-		totalWeight += o.weight
-	end
-	local pick = rng:NextNumber() * totalWeight
-	local offset = CrateConfig.Odds[#CrateConfig.Odds].offset
-	for _, o in CrateConfig.Odds do
-		pick -= o.weight
-		if pick <= 0 then
-			offset = o.offset
-			break
-		end
-	end
-	local maxTier = math.min(CrateConfig.MaxTier or Cows.Count, Cows.Count)
-	-- never roll above MaxTier, but never below what the best-tier offset would give a low player
-	return math.clamp(bestTier + offset + shift, 1, math.max(maxTier, math.min(bestTier, Cows.Count)))
+	-- same outcome table the Crates panel shows (shared/Odds), so displayed odds == real odds
+	return Odds.Roll(Odds.Crate(bestTier, shift), rng)
 end
 
 -- highest tier with count > 0 (1 if none)
