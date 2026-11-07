@@ -16,7 +16,7 @@ local EVENTS = {
 	"CowDiscovered", -- (tier: number) first time this player got this tier
 	"CrateOpened", -- (tier: number, source: string) result of a crate roll, for the spin animation
 	"OfflineEarnings", -- (milk: number, seconds: number) welcome back popup
-	"Fx", -- (kind: string, payload: table) server-triggered juice: "cash" {amount, position}, "merge" {position}, "rare" {kind}, "buy" {position, count}  (C5 renders)
+	"Fx", -- (kind: string, payload: table) server-triggered juice, rendered by FxController. Kinds and payloads are documented in src/shared/Fx.luau
 
 	-- client -> server
 	"RequestUpgrade", -- (upgradeId: string)
