@@ -113,6 +113,8 @@ local function onPlayerAdded(player: Player)
 	if profile.Data.firstJoin == 0 then
 		profile.Data.firstJoin = os.time()
 		profile.Data.cows = DataService:NewStartingCows()
+		profile.Data.tankMilk = Economy.StartingTankMilk
+		profile.Data.crates = Economy.StartingCrates
 	end
 	profiles[player] = profile
 
