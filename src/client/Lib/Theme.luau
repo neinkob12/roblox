@@ -26,8 +26,10 @@ Theme.Layers = {
 	Trailer = 1000,
 }
 
--- Width kept free on the right for the side menu (2 x 64 buttons + gap + margins, see Menu).
-Theme.MenuReserve = 160
+-- Width kept free on the right for the side menu (MenuColumns x 64 buttons + gaps + margins, see Menu).
+-- F2: 3 columns (9 buttons in 3 rows stay clear of the mobile jump button): 3*64 + 2*8 + 10 + 12.
+Theme.MenuColumns = 3
+Theme.MenuReserve = 230
 
 Theme.Font = Enum.Font.FredokaOne
 Theme.TitleFont = Enum.Font.LuckiestGuy

@@ -3,6 +3,7 @@
 -- so displayed prices can never drift from what the server charges again.
 
 local Economy = require(script.Parent.Config.Economy)
+local Eggs = require(script.Parent.Config.Eggs)
 local Multipliers = require(script.Parent.Multipliers)
 
 local Pricing = {}
@@ -27,6 +28,19 @@ function Pricing.Crate(player: Player, data: any): number
 	end
 	local price = math.max(c.BuyBasePrice, mps * c.BuyPriceSecondsOfProduction)
 	return math.floor(price * (c.BuyPriceGrowth or 1) ^ (data.cratesBought or 0))
+end
+
+-- F1: price of one egg = max(minPrice, priceSeconds x milk/s x cash multiplier). 0 for unknown ids.
+function Pricing.Egg(player: Player, data: any, eggId: string): number
+	local egg = Eggs.ById[eggId]
+	if not egg then
+		return 0
+	end
+	if not data then
+		return egg.minPrice
+	end
+	local income = Multipliers.MilkPerSecond(player, data) * Multipliers.Cash(player, data)
+	return math.floor(math.max(egg.minPrice, income * egg.priceSeconds))
 end
 
 -- Cash needed for the next rebirth.

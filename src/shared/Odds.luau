@@ -7,9 +7,16 @@
 --   Odds.Percent(0.0123) -> "1.23%"
 --
 -- Generic form for other systems (eggs): Odds.Normalize({ { key = ..., weight = n }, ... }).
+--
+-- Luck (F1 pets): every function that builds a table takes an optional `luck` (0.5 = +50%,
+-- Multipliers.PetBonus(data, "luck")). It multiplies the weight of every outcome ABOVE the lowest
+-- one by (1 + luck) before normalizing, so the shown odds already include the player's luck.
+--   Odds.Egg(eggId, luck?)  -- { { key = "mochi", chance = 0.2167 }, ... } sums to 1, keys = pet ids
 
 local Economy = require(script.Parent.Config.Economy)
 local Cows = require(script.Parent.Config.Cows)
+local Pets = require(script.Parent.Config.Pets)
+local Eggs = require(script.Parent.Config.Eggs)
 
 export type Outcome = { key: any, chance: number }
 
@@ -41,10 +48,30 @@ function Odds.Normalize(entries: { { key: any, weight: number } }): { Outcome }
 	return out
 end
 
+-- F1: multiply every weight whose rank is above the lowest present rank by (1 + luck).
+-- `rank(key)` orders outcomes (higher = better). Entries are changed in place.
+local function applyLuck(entries: { { key: any, weight: number } }, luck: number?, rank: (any) -> number)
+	local l = luck or 0
+	if l <= 0 or l ~= l or l == math.huge then
+		return
+	end
+	local lowest = math.huge
+	for _, e in entries do
+		if e.weight > 0 then
+			lowest = math.min(lowest, rank(e.key))
+		end
+	end
+	for _, e in entries do
+		if e.weight > 0 and rank(e.key) > lowest then
+			e.weight *= 1 + l
+		end
+	end
+end
+
 -- Crate outcomes for a player whose best owned tier is `bestTier`. `shift` = premium bonus.
 -- Keys are cow tiers. Clamping (tier 1 floor, Crate.MaxTier ceiling) merges outcomes, so the
--- displayed list is exactly what can drop.
-function Odds.Crate(bestTier: number, shift: number): { Outcome }
+-- displayed list is exactly what can drop. `luck` (optional, F1) boosts every tier above the lowest.
+function Odds.Crate(bestTier: number, shift: number, luck: number?): { Outcome }
 	local crate = Economy.Crate
 	local maxTier = math.min(crate.MaxTier or Cows.Count, Cows.Count)
 	-- never roll above MaxTier, but never below what the best tier would give a low player
@@ -53,11 +80,42 @@ function Odds.Crate(bestTier: number, shift: number): { Outcome }
 	for _, o in crate.Odds do
 		table.insert(entries, { key = math.clamp(bestTier + o.offset + shift, 1, ceiling), weight = o.weight })
 	end
+	applyLuck(entries, luck, function(key)
+		return key
+	end)
 	local outcomes = Odds.Normalize(entries)
 	table.sort(outcomes, function(a, b)
 		return a.key < b.key
 	end)
 	return outcomes
+end
+
+-- F1: egg outcomes, keys are pet ids. The rarity is rolled with the egg's rarity weights (luck
+-- applied per rarity), then a pet of that rarity with equal weight. Sorted rarest last.
+-- Unknown egg id -> {}.
+function Odds.Egg(eggId: string, luck: number?): { Outcome }
+	local egg = Eggs.ById[eggId]
+	if not egg then
+		return {}
+	end
+	local rarityEntries = {}
+	for _, r in Pets.Rarities do
+		local w = egg.odds[r.id] or 0
+		if w > 0 and #Pets.ByRarity[r.id] > 0 then
+			table.insert(rarityEntries, { key = r.id, weight = w })
+		end
+	end
+	applyLuck(rarityEntries, luck, function(key)
+		return Pets.RarityById[key].order
+	end)
+	local entries = {}
+	for _, e in rarityEntries do
+		local list = Pets.ByRarity[e.key]
+		for _, pet in list do
+			table.insert(entries, { key = pet.id, weight = e.weight / #list })
+		end
+	end
+	return Odds.Normalize(entries)
 end
 
 -- Server: pick one outcome key.
