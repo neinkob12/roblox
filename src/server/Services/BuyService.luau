@@ -54,6 +54,7 @@ local function buy(player: Player, n: number)
 	DataService:Replicate(player, "cowsBought")
 	HerdUtil.GiveCow(player, 1, n)
 	HerdUtil.Notify(player, `+{n} cow{if n == 1 then "" else "s"}!`, "success")
+	require(ReplicatedStorage.Shared.Net).Event("Fx"):FireClient(player, "buy", { count = n })
 	BuyService:RefreshLabels(player)
 end
 
