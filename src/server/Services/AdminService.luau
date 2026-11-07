@@ -323,7 +323,7 @@ local function run(player: Player, text: string)
 		notify(player, "[Admin] data not loaded yet", "error")
 		return
 	end
-	local ok, err = pcall(cmd.run, player, args)
+	local ok, err = pcall(cmd.run :: any, player, args)
 	if not ok then
 		warn(`[AdminService] {first} failed: {err}`)
 		notify(player, `[Admin] {first} failed, see Output`, "error")

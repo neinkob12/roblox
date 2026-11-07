@@ -315,8 +315,9 @@ local function updateBoosts(now: number)
 			seen[key] = true
 			local row = boostRows[key]
 			if not row then
-				row = chip(boostList, "Boost_" .. key, Vector2.new(170, 26), Colors.PurpleDark)
-				C.Label(row, {
+				local newRow = chip(boostList, "Boost_" .. key, Vector2.new(170, 26), Colors.PurpleDark)
+				row = newRow
+				C.Label(newRow, {
 					name = "Text",
 					size = UDim2.new(1, -10, 1, -4),
 					position = UDim2.fromScale(0.5, 0.5),
@@ -416,7 +417,7 @@ function Hud:Start()
 	updateSelling()
 
 	while true do
-		local ok, err = pcall(updateTimers)
+		local ok, err = pcall(updateTimers :: any)
 		if not ok then
 			warn(`[Hud] {err}`)
 		end

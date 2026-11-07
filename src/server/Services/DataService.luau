@@ -73,10 +73,8 @@ DataService.PlayerLoaded = Signal.new()
 DataService.PlayerSaving = Signal.new()
 DataService.Template = TEMPLATE
 
-local store = ProfileStore.New(STORE_NAME, TEMPLATE)
-if RunService:IsStudio() and USE_MOCK_IN_STUDIO then
-	store = store.Mock
-end
+local liveStore = ProfileStore.New(STORE_NAME, TEMPLATE)
+local store = if RunService:IsStudio() and USE_MOCK_IN_STUDIO then liveStore.Mock else liveStore
 
 local profiles: { [Player]: any } = {}
 

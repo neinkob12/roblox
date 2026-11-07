@@ -310,7 +310,7 @@ function LeaderboardService:Start()
 		local userId = player.UserId
 		task.spawn(function()
 			for _, board in boards do
-				pcall(write, board, player, data)
+				pcall(write :: any, board, player, data)
 				board.written[userId] = nil
 			end
 		end)
@@ -322,7 +322,7 @@ function LeaderboardService:Start()
 
 	while true do
 		for _, board in boards do
-			local ok, err = pcall(refresh, board)
+			local ok, err = pcall(refresh :: any, board)
 			if not ok then
 				warn(`[LeaderboardService] refresh failed: {err}`)
 			end
