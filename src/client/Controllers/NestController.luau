@@ -497,7 +497,7 @@ local function playReveal(petId: string, variant: string)
 		banner.Rotation = -4
 	end
 
-	local spin = RunService.RenderStepped:Connect(function(dt)
+	local spin = RunService.RenderStepped:Connect(function(dt: number)
 		if C.ReduceMotion() then
 			return
 		end

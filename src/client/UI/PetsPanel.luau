@@ -10,7 +10,6 @@
 --   Menu badge "Pets" = ready eggs in nests + an available free egg.
 -- Data shapes: F1 PetService/EggService headers (data.pets, equippedPets, petIndex, nests).
 
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Net = require(ReplicatedStorage.Shared.Net)
@@ -23,7 +22,6 @@ local Panels = require(script.Parent.Components)
 local Menu = require(script.Parent.Menu)
 local DataController = require(script.Parent.Parent.Controllers.DataController)
 
-local player = Players.LocalPlayer
 local Colors = C.Colors
 local Theme = C.Theme
 
